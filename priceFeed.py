@@ -214,7 +214,3 @@ def dexScreener_token_data(mint_address): # fetches token pairs seaching with to
         pass
 
 
-
-
-# data = {'2025-04-05 11:14:07': {'Token_names': ["$Ray","$sol"], 'contracts': []}, '2025-04-05 11:14:04': {'Token_names': ['$jup','$ray','$sol'], 'contracts': []}}
-# token_tweeted_analyzor(data,'freeman','yes')

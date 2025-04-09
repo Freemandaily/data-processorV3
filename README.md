@@ -1,10 +1,10 @@
 # Data-Extraction-and-Processing
-This is an analyst Module Whch serves the purpose of extracting  and Processing Token tweeted by you favourite X handle To understand the impact of handle toward  TOKEN..  
+This is an analyst Module Which serves the purpose of extracting  and Processing Token tweeted by specified X handle in order to  understand the impact of the tweet towards  the TOKEN..  
 
 ### Key Features
-- **Fetching tweets from a handle within specified timeframe day( Default timeframe  is 7)**
+- **Fetching tweets from a handle within specified timeframe day( Default timeframe  is 7, Adjust per choice)**
 - **Extracts Token Symbol and contract addresses mentioned in each tweets**
-- **Using  the Tweeted Timestamp, retrieves the historical price data of the token after the  tweet**
+- **Using  the Tweeted Timestamp to retrieves the historical price data of the token after the  tweet**
 - **Stores the data in a csv file**
 
 
@@ -13,7 +13,7 @@ This is an analyst Module Whch serves the purpose of extracting  and Processing 
 - **Moralis API Key**
 - **tweepy X library : ```pip install tweepy```**
 - **pandas library: ```pip install pandas```**
-- **pytz library : ```pip install pytz```**
+- **pytz library : ```pip install pytz```\n**
 **Add the Bearer Token and moralis Api key into the ```key.json``` file** 
 
 

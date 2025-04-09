@@ -79,7 +79,7 @@ class processor:
         time.sleep(3)
         tweets = self.fetchTweets()
         fetched_Token_details = []
-        #tweets = [{'tweet_id': 1909712497101140368, 'tweet_text': 'RT @MaisonGhost: To be $real for a second.\n\nAs $someone who’s been deep in the degen trenches for years:\n\nDon’t blow up your whole portfolio.…', 'created_at': '2025-04-08 20:58:34'}, {'tweet_id': 1909706550886961239, 'tweet_text': 'Losing 3-0 to $arsenal is crazy. \n\nMadrid are frauds. 😂 😂', 'created_at': '2025-04-08 20:34:57'}, {'tweet_id': 1909683019264229417, 'tweet_text': 'Hala madrid. \n\nEasy 3.5x trade. https://t.co/bTuDYFL1RL', 'created_at': '2025-04-08 19:01:26'}, {'tweet_id': 1909651632784077150, 'tweet_text': 'RT @SolDeckBot: 104%\n\nDEX PAID - We Sniped The Payment (Processing)\n\nCA: 6NNekhogMAFtoT68sPWyrr\n\nGet Alerted First -…', 'created_at': '2025-04-08 16:56:43'},{'tweet_id': 1908211481939714245, 'tweet_text': 'RT @fomomofosol: I will buy a house with house', 'created_at': '2025-04-04 17:34:04'}]
+    
         if tweets:
             for tweet in tweets:
                 token_details = self.fetchTicker_Contract(tweet['tweet_text'])

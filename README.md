@@ -20,5 +20,5 @@ This is an analyst Module Which serves the purpose of extracting  and Processing
 ### Usage
 - **Run python3 main.py**
 - **Enter Influencer Username  and timeFrame To Analyze. highest number of pages to retrieve is 300, adjust according**<br>
-  **Note: The script uses jupiter project token list to matches the token symbol , you can try to match token symbols extensively by adding "No" to the "token_tweeted_analyzor" function call in "main.py"**
+  Note: The script uses jupiter project token list to matches the token symbol , you can try to match token symbols extensively by adding "No" to the "token_tweeted_analyzor" function call in "main.py"
   

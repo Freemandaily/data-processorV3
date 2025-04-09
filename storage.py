@@ -61,7 +61,4 @@ def add_to_csv(Influencer_name:str,tweeted_token:dict)->None:
         time.sleep(2)
         print("New Influencer Data Added To CSV file")
 
-# add_to_csv(Influencer_name,tweeted_token)
-
-
 

@@ -531,9 +531,9 @@ def display(df_data):
             analyzor = token_tweeted_analyzor(tweeted_token_details,int(next_timeframe))
             df_data = add_to_csv(analyzor) 
             st.session_state['df_data'] = df_data
-    elif 'linkSearch' in st.session_state or 'kolSearch' in st.session_state and next_timeframe == None :
+    elif ('linkSearch' in st.session_state or 'kolSearch' in st.session_state) and next_timeframe == None :
         add_to_csv(df_data)
-    elif 'linkSearch' in st.session_state or 'kolSearch' in st.session_state and next_timeframe != None:
+    elif ('linkSearch' in st.session_state or 'kolSearch' in st.session_state) and next_timeframe != None:
         timeframe = st.session_state['Timeframe']+','+ str(next_timeframe)
         st.session_state['Timeframe'] = timeframe
         if 'linkSearch' in st.session_state:

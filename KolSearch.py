@@ -12,8 +12,8 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-Ticker_url = 'https://basesearch2.onrender.com/ticker' 
-SearchUserTweet_url = 'https://basesearch2.onrender.com/SearchUserTweet'
+Ticker_url = 'https://basesearchV3.onrender.com/ticker' 
+SearchUserTweet_url = 'https://basesearchV3.onrender.com/SearchUserTweet'
 
 # Ticker_url = 'http://127.0.0.1:8000/ticker'
 # SearchUserTweet_url = 'http://127.0.0.1:8000/SearchUserTweet'
@@ -122,7 +122,7 @@ def searchKeyword(keyword:str,date:str,timeframe:str,from_date:str|None = None,l
     try:
         async def main():
             EarlyTweeters = []
-            url = f'http://127.0.0.1:8000/search/{keyword}/{date}'
+            url = f'https://basesearchv3.onrender.com/search/{keyword}/{date}'
             
             params = {
                 'from_date':from_date,

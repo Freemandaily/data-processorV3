@@ -12,12 +12,11 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-api = 'd152f89dae1d45d8939a975482e21a53'
-# Ticker_url = 'https://basesearch2.onrender.com/ticker' 
-# SearchUserTweet_url = 'https://basesearch2.onrender.com/SearchUserTweet'
+Ticker_url = 'https://basesearch2.onrender.com/ticker' 
+SearchUserTweet_url = 'https://basesearch2.onrender.com/SearchUserTweet'
 
-Ticker_url = 'http://127.0.0.1:8000/ticker'
-SearchUserTweet_url = 'http://127.0.0.1:8000/SearchUserTweet'
+# Ticker_url = 'http://127.0.0.1:8000/ticker'
+# SearchUserTweet_url = 'http://127.0.0.1:8000/SearchUserTweet'
 
 
 async def AggregateScore(tickerPriceData:list) ->dict:

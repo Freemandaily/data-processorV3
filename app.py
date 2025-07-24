@@ -180,7 +180,7 @@ def loadsearch(process=None,timeframe=None):
     elif search.search_with == 'link':
         logging.info('Searching With Link')
         with st.spinner(f'Processing  Tweets in Url......'):
-            timeframe = '5,30,2:0'
+            timeframe = '1,15,4:0,24:0'
             st.session_state['Timeframe'] = timeframe
             # process.search_with_id(username_url)
             # tweeted_token_details = process.processTweets()  # Enterance to new logic search 
@@ -236,7 +236,7 @@ def loadsearch(process=None,timeframe=None):
                 st.session_state['choose_time'] = choose_time
                 combine_date_time =  datetime.combine(choose_date,choose_time)
                 with st.spinner(f'Processing  Search Ticker On Cex......'):
-                    timeframe = '5,30,2:0'
+                    timeframe = '1,5,10,20,30,24:0'
                     st.session_state['Timeframe'] = timeframe
                     tickers = contracts_input
                     start_date = str(combine_date_time)
@@ -503,6 +503,7 @@ elif search.search_with == 'KolSearch':
         st.session_state['df_data'] = userResult
   
 def display(df_data):
+    
     from datetime import datetime
     next_timeframe = st.selectbox(
         'Add Timeframe for x',
@@ -512,6 +513,7 @@ def display(df_data):
         accept_new_options=True
     )
     if 'linkSearch' not in st.session_state and 'Search Ticker On Cex' not in st.session_state and 'kolSearch' not in st.session_state:
+        
         if 'displayed' in st.session_state and next_timeframe !=None and  st.session_state['Timeframe'] != next_timeframe:
             st.session_state['Timeframe'] = next_timeframe
             if isinstance(next_timeframe,str):
@@ -533,10 +535,12 @@ def display(df_data):
             st.session_state['df_data'] = df_data
     elif ('linkSearch' in st.session_state or 'kolSearch' in st.session_state) and next_timeframe == None :
         add_to_csv(df_data)
-    elif ('linkSearch' in st.session_state or 'kolSearch' in st.session_state) and next_timeframe != None:
+    elif ('linkSearch' in st.session_state or 'kolSearch' in st.session_state )and next_timeframe != None:
+        
         timeframe = st.session_state['Timeframe']+','+ str(next_timeframe)
         st.session_state['Timeframe'] = timeframe
         if 'linkSearch' in st.session_state:
+            
             process = processor()
             with st.spinner('Fecthing Added Timeframe Prices'):
                 if 'Search Ticker On Cex' in st.session_state:
@@ -548,7 +552,7 @@ def display(df_data):
                     data = process.linkSearch(username_url,timeframe)
         else:
             # pass
-            TotalUsersToRetrieve = 5
+            TotalUsersToRetrieve = 10
             AnalyzeTweet =  10
             data = searchKeyword(
                 kolSearch,
@@ -563,7 +567,9 @@ def display(df_data):
                 st.stop()
         df_data = add_to_csv(data) 
         st.session_state['df_data'] = df_data
-        
+    
+   
+       
     if 'linkSearch' not in st.session_state and 'kolSearch' not in st.session_state:
         logging.info('Displaying Data')
         st.dataframe(df_data)

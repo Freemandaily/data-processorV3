@@ -176,6 +176,8 @@ def loadsearch(process=None,timeframe=None):
         with st.spinner(f'Processing @{username_url} Tweets'):
             process.fetchTweets()
             tweeted_token_details = process.processTweets()
+            if 'Error' in tweeted_token_details:
+                st.stop()
             return tweeted_token_details
     elif search.search_with == 'link':
         logging.info('Searching With Link')
@@ -455,7 +457,9 @@ elif search.search_with == 'Contracts':
         if 'Search_tweets_Contract' in st.session_state and  'Search_tweets_Contract_displayed' not in st.session_state :
             with st.spinner('Searching Early Tweets Containing Contract.Might Take A While........'):
                 process.search_tweets_with_contract()
-                process.processTweets()
+            result= process.processTweets()
+            if 'Error' in result:
+                st.stop()
             with st.spinner('Fetching Tweeted Contract Price Datas. Please Wait.....'):
                 tweeted_Token_details = st.session_state['tweeted_token_details'] 
                 analyzor = token_tweeted_analyzor(tweeted_Token_details,5)

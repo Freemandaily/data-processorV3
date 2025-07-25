@@ -98,7 +98,7 @@ def linkSearchDisplay(data):
     for item in data:
         symbol_dfs = {}
         for Token_symbol, value in item.items():
-            if Token_symbol.startswith('$') and value != 'Not On Bybit':
+            if Token_symbol.startswith('$') and value != 'Not On Exchange':
                 symbol_dfs[Token_symbol] = {
                     'Info': ['Entry_Price', 'Price', '%_Change', 'Peak_Price', '%_Entry_to_Peak', 'lowest_Price','Max_Drawdown']
                 }

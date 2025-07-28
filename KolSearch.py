@@ -29,7 +29,7 @@ async def AggregateScore(tickerPriceData:list) ->dict:
     return symbol_data
 
 # tweetData = {'contracts':[1,2,4],'ticker_names':['BTC','ETH','SOL'],'date_tweeted':'2025-07-01 08:08:00'}
-async def TweetdataProcessor(tweetData:dict,timeframe:str):
+async def TweetdataProcessor(tweetData:dict,timeframe:str,singleHandSearch:str|None=None):
     # url = 'http://127.0.0.1:8000/ticker'
     # url = 'https://basesearch2.onrender.com/ticker' 
     contracts = tweetData['contracts']
@@ -48,20 +48,22 @@ async def TweetdataProcessor(tweetData:dict,timeframe:str):
         if response.status_code == 200:
             data = response.json()
             tickers_scores = await asyncio.create_task(AggregateScore(data))
+            if singleHandSearch:
+                   tickers_scores['date_tweeted'] = date_tweeted
             return tickers_scores
         else:
             pass
     
         
 # asyncio.run(TweetdataProcessor(tweetData,'5'))
-async def processUsertweetedTicker_Contract(userTweetData:list,timeframe:str):
+async def processUsertweetedTicker_Contract(userTweetData:list,timeframe:str,mode:str|None=None):
     logging.info('Processing User Tweeeted Tickers And Contract')
     username = list(userTweetData.keys())[0]
     userfinalData = {username:[]}
     tweetDatas = list(userTweetData.values())[0]
     
 
-    userTickerScores_task = [TweetdataProcessor(tweetData,timeframe) for tweetData in tweetDatas]
+    userTickerScores_task = [TweetdataProcessor(tweetData,timeframe,mode) for tweetData in tweetDatas]
     userTickerScores = await asyncio.gather(*userTickerScores_task)
     userfinalData[username] = userTickerScores
     return userfinalData

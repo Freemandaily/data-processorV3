@@ -9,7 +9,7 @@ from storage import add_to_csv
 from TweetData import contractProcessor
 import gspread
 from gspread_dataframe import set_with_dataframe
-from KolSearch import searchKeyword
+from KolSearch import searchKeyword,SingleUserSearch
 
 logging.basicConfig(
     level=logging.INFO,
@@ -131,6 +131,7 @@ with st.sidebar:
     st.title('Data Configuration')
     username_url = st.text_input('Enter X Handle Or Tweet Url (Https://..\n')
     timeframe = st.selectbox('Choose A TimeFrame',[7,30,90])
+    tweet_limit = st.slider('Total Tweets To Analyze',1,60,1)
     first_tweet_minute = st.slider('First Tweet Minute After Pool Creation',1,60,1) # GeckoTerminal price indexing changes somethings we use this to toggle price searhc time
     follower_threshold =  st.slider('Kols Followers Threshold',700,1000,1000)
     st.divider()
@@ -174,11 +175,20 @@ def loadsearch(process=None,timeframe=None):
             st.stop() 
         
         with st.spinner(f'Processing @{username_url} Tweets'):
-            process.fetchTweets()
-            tweeted_token_details = process.processTweets()
-            if 'Error' in tweeted_token_details:
-                st.stop()
-            return tweeted_token_details
+            # process.fetchTweets()
+            # tweeted_token_details = process.processTweets() For proessing trough tweet to find contract Mentinons
+            # if 'Error' in tweeted_token_details:
+            #     st.stop()
+            # return tweeted_token_details
+            timeframe = '1,15,4:0,24:0'
+            st.session_state['Timeframe'] = timeframe
+            # tweet_limit = 20
+            data_frame = SingleUserSearch(username_url,timeframe,tweet_limit)
+            st.session_state['SingleSearch'] = 'yes'
+            if 'linkSearch' in st.session_state :
+                del st.session_state['linkSearch']
+            return data_frame
+
     elif search.search_with == 'link':
         logging.info('Searching With Link')
         with st.spinner(f'Processing  Tweets in Url......'):
@@ -202,10 +212,6 @@ def loadsearch(process=None,timeframe=None):
             st.session_state['Search_tweets_Contract'] = 'Search_tweets_Contract'
             if 'data_frames' in st.session_state:
                 del st.session_state['data_frames']
-            
-            # if 'kolSearch' in st.session_state:
-            #     pass
-
             combine_date_time = None  
         elif search_option == 'Search Contracts Onchain':
             logging.info('Search Contracts Onchain Activated')
@@ -214,10 +220,7 @@ def loadsearch(process=None,timeframe=None):
             
             if 'df_data' in st.session_state:
                 del st.session_state['df_data']
-            
-            # if 'kolSearch' in st.session_state:
-            #     pass
-            
+          
             if choose_date and choose_time:
                 st.session_state['choose_date'] = choose_date
                 st.session_state['choose_time'] = choose_time
@@ -227,9 +230,6 @@ def loadsearch(process=None,timeframe=None):
                 st.stop()
         elif search_option == 'Search Ticker On Cex':
             logging.info('Search Ticker On Cex Activated')
-
-            # if 'kolSearch' in st.session_state:
-            #     pass
             
             if 'Search Ticker On Cex' in st.session_state:
                 return None
@@ -397,7 +397,7 @@ if search.search_with == 'handle' or  search.search_with == 'link':
             st.toast(f'{search.search_with} Tweets Successfully Processed!')    
         st.session_state['tweeted_token_details'] = tweeted_token_details # setting this so that for custom timeframe uses it
 
-        if 'linkSearch' not  in st.session_state:
+        if 'linkSearch' not  in st.session_state and 'SingleSearch' not in st.session_state:
             with st.spinner('Fetching Tweeted Tokens and Price Datas. Please Wait.....'):
                 analyzor = token_tweeted_analyzor(tweeted_token_details) # Removed Token choice
                 st.session_state['Timeframe'] = 5
@@ -417,6 +417,8 @@ if search.search_with == 'handle' or  search.search_with == 'link':
             # Link Search
             st.session_state['df_data'] = tweeted_token_details
 elif search.search_with == 'Contracts':
+    if 'SingleSearch' in st.session_state:
+        del st.session_state['SingleSearch']
     st.session_state['first_tweet_minute'] = int(first_tweet_minute)
     st.session_state['follower_threshold'] = follower_threshold
     process_2 = processor()
@@ -482,6 +484,8 @@ elif search.search_with == 'Contracts':
             price_datas = process.contracts_price_data
             process.slide(price_datas,next_timeframe)
 elif search.search_with == 'KolSearch':
+    if 'SingleSearch' in st.session_state:
+        del st.session_state['SingleSearch']
     if 'linkSearch' in st.session_state :
         del st.session_state['linkSearch']
     timeframe = '20,30,1:0,2:0'
@@ -516,7 +520,7 @@ def display(df_data):
         placeholder= 'Select Timeframe for x',
         accept_new_options=True
     )
-    if 'linkSearch' not in st.session_state and 'Search Ticker On Cex' not in st.session_state and 'kolSearch' not in st.session_state:
+    if 'linkSearch' not in st.session_state and 'Search Ticker On Cex' not in st.session_state and 'kolSearch' not in st.session_state and 'SingleSearch' not in st.session_state:
         
         if 'displayed' in st.session_state and next_timeframe !=None and  st.session_state['Timeframe'] != next_timeframe:
             st.session_state['Timeframe'] = next_timeframe
@@ -537,9 +541,9 @@ def display(df_data):
             analyzor = token_tweeted_analyzor(tweeted_token_details,int(next_timeframe))
             df_data = add_to_csv(analyzor) 
             st.session_state['df_data'] = df_data
-    elif ('linkSearch' in st.session_state or 'kolSearch' in st.session_state) and next_timeframe == None :
+    elif ('linkSearch' in st.session_state or 'kolSearch' in st.session_state or 'SingleSearch' in st.session_state) and next_timeframe == None :
         add_to_csv(df_data)
-    elif ('linkSearch' in st.session_state or 'kolSearch' in st.session_state )and next_timeframe != None:
+    elif ('linkSearch' in st.session_state or 'kolSearch' in st.session_state or 'SingleSearch' in st.session_state) and next_timeframe != None:
         
         timeframe = st.session_state['Timeframe']+','+ str(next_timeframe)
         st.session_state['Timeframe'] = timeframe
@@ -554,7 +558,7 @@ def display(df_data):
                     data = process.SearchTickerOnCex(tickers,start_date,timeframe)
                 else:
                     data = process.linkSearch(username_url,timeframe)
-        else:
+        elif 'kolSearch' in st.session_state :
             # pass
             TotalUsersToRetrieve = 10
             AnalyzeTweet =  10
@@ -569,12 +573,18 @@ def display(df_data):
             if 'Error' in data:
                 st.error(data['Error'])
                 st.stop()
+        else:
+            # tweet_limit = 10
+            with st.spinner(F'Procesing {username_url} Tweets With Added Timeframe'):
+                data = SingleUserSearch(username_url,timeframe,tweet_limit)
+            if 'Error' in data:
+                st.error(data['Error'])
         df_data = add_to_csv(data) 
         st.session_state['df_data'] = df_data
     
    
        
-    if 'linkSearch' not in st.session_state and 'kolSearch' not in st.session_state:
+    if 'linkSearch' not in st.session_state and 'kolSearch' not in st.session_state and 'SingleSearch' not in st.session_state:
         logging.info('Displaying Data')
         st.dataframe(df_data)
         st.session_state['displayed'] = 'yes'

@@ -153,7 +153,56 @@ def searchKeyword(keyword:str,date:str,timeframe:str,from_date:str|None = None,l
         return userResult
     except Exception as e:
         return {'Error': f'Error  Occured {e}'}
-   
+
+# for Single users Search
+def SingleUserSearch(Handle:str,timeframe:str,tweet_limit:int=10):
+    async def main():
+        try:
+            mode = 'singleSearch'
+            UserTweet = await RequestUserTweets(Handle,tweet_limit)
+            userdata = await processUsertweetedTicker_Contract(UserTweet,timeframe,mode)
+           
+            tickerData = userdata[Handle]
+        except Exception as e:
+            return {'Error':f'The issue is {e}'}
+       
+        try:  
+            logging.info('Reforming Data')  
+            final_data = {}
+            for item in tickerData:
+                if not item:
+                    continue
+                date = item['date_tweeted'][:-8]
+                if date not in final_data:
+                    final_data[date] = {}
+                for key,value in item.items():
+                    
+                    if key in final_data[date] and key != 'date_tweeted':
+                        final_data[date][key] +=value
+                    elif key != 'date_tweeted':
+                        final_data[date][key] =value
+            
+            display_data = []
+            for date,ticker_scores in final_data.items():
+                if not ticker_scores:
+                    continue
+
+                prepare = {
+                    'Date': date,
+                    'Tickers_Called': [ symbol for symbol in ticker_scores.keys()],
+                    'Score':   sum(score for score in ticker_scores.values())
+                }
+                display_data.append(prepare)
+            df = pd.DataFrame(display_data)
+            return df
+        except Exception as e:
+            return {'Error':f'The issue is from {e}'}
+    
+    dataFrame = asyncio.run(main())
+    return(dataFrame)
+             
+
+
 
 # keyword = 'GMX hacked OR Exploited OR Exploit OR Hack'
 # date = '2025-07-09'

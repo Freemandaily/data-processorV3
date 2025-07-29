@@ -124,7 +124,7 @@ def searchKeyword(keyword:str,date:str,timeframe:str,from_date:str|None = None,l
     try:
         async def main():
             EarlyTweeters = []
-            url = f'https://basesearchv3.onrender.com/search/{keyword}/{date}'
+            url = f'https://basesearchv3-71083952794.europe-west3.run.app/search/{keyword}/{date}'
             
             params = {
                 'from_date':from_date,

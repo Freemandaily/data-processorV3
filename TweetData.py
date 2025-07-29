@@ -56,7 +56,7 @@ class processor:
             return Error_message
         
     def linkSearch(self,link:str,timeframe:str):
-        url = 'https://basesearchV3.onrender.com/link'
+        url = 'https://basesearchv3-71083952794.europe-west3.run.app/link'
         # url = 'http://127.0.0.1:8000/link'
         params ={
             'tweet_url':link,
@@ -69,7 +69,7 @@ class processor:
         return {'Error':f'Failed Search With Code {response.status_code}.module:TweetData.py'}
 
     def SearchTickerOnCex(self,tickers:str,start_date:str,timeframe:str) ->dict:
-        url = 'https://basesearchV3.onrender.com/ticker'
+        url = 'https://basesearchv3-71083952794.europe-west3.run.app/ticker'
         # url = 'http://127.0.0.1:8000/ticker'
         params ={
             'tickers':tickers,

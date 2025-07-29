@@ -246,6 +246,8 @@ def loadsearch(process=None,timeframe=None):
                     st.session_state['linkSearch'] = tickers
                     st.session_state['Search Ticker On Cex'] = 'yes'
                     st.session_state['contracts_input'] = contracts_input
+                    if 'kolSearch' in st.session_state:
+                        del st.session_state['kolSearch']
 
                     if 'Error' in tweeted_token_details:
                         st.error(tweeted_token_details['Error'])

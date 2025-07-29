@@ -12,8 +12,8 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-Ticker_url = 'https://basesearchV3.onrender.com/ticker' 
-SearchUserTweet_url = 'https://basesearchV3.onrender.com/SearchUserTweet'
+Ticker_url = 'https://basesearchv3-71083952794.europe-west3.run.app/ticker' 
+SearchUserTweet_url = 'https://basesearchv3-71083952794.europe-west3.run.app/SearchUserTweet'
 
 # Ticker_url = 'http://127.0.0.1:8000/ticker'
 # SearchUserTweet_url = 'http://127.0.0.1:8000/SearchUserTweet'

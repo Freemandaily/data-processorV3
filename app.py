@@ -491,7 +491,7 @@ elif search.search_with == 'KolSearch':
     if 'linkSearch' in st.session_state :
         del st.session_state['linkSearch']
     timeframe = '20,30,1:0,2:0'
-    TotalUsersToRetrieve = 30
+    TotalUsersToRetrieve = 10
     AnalyzeTweet =  10
     
     if kolSearch_date: #and 'kolSearch' not in st.session_state:
@@ -562,7 +562,7 @@ def display(df_data):
                     data = process.linkSearch(username_url,timeframe)
         elif 'kolSearch' in st.session_state :
             # pass
-            TotalUsersToRetrieve = 30
+            TotalUsersToRetrieve = 10
             AnalyzeTweet =  10
             data = searchKeyword(
                 kolSearch,

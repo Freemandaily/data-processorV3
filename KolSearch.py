@@ -1,10 +1,13 @@
 import asyncio
+from importlib import simple
 import sys
-import time
+import time,os
+import streamlit as st
+import pandas as pd
 import requests
 import tweepy,logging
 import aiohttp
-import pandas as pd
+ 
 
  
 logging.basicConfig(
@@ -12,12 +15,54 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-Ticker_url = 'https://basesearchv3-71083952794.europe-west3.run.app/ticker' 
-SearchUserTweet_url = 'https://basesearchv3-71083952794.europe-west3.run.app/SearchUserTweet'
-
 # Ticker_url = 'http://127.0.0.1:8000/ticker'
 # SearchUserTweet_url = 'http://127.0.0.1:8000/SearchUserTweet'
+Ticker_url = 'https://basesearchv3-71083952794.europe-west3.run.app/ticker'
+SearchUserTweet_url = 'https://basesearchv3-71083952794.europe-west3.run.app/SearchUserTweet'
+GEMINI_API = os.environ.get('GEMINIKEY')
+GEMINI_URL =  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
+
+
+
+
+def GeminiRefine(tweet_text:str,prompt:str|None=None):
+    search_prompt = f'You are an expert at analyzing cryptocurrency-related tweets and news. Based on the context of the provided text, extract the ticker symbol(s) of the main cryptocurrency or token being discussed. If the text focuses on a crypto platform (e.g., an exchange or blockchain) rather than a specific token, identify and return the ticker symbol of the platform’s native token, if applicable (e.g., Telegram → TON, Binance → BNB). If the text mentions a founder, team member, or associate tied to a cryptocurrency or platform, extract the ticker symbol of the specific token associated with them (e.g., Pavel Durov → TON, Vitalik Buterin → ETH, Anatoly Yakovenko → SOL). Use known associations between founders, platforms, and tokens to infer the token even if not explicitly mentioned. If multiple tokens are mentioned, prioritize the token(s) that are the primary focus of the text based on context. If no specific token, platform, or founder is mentioned, or if the focus is unclear, return "None." Only return the ticker symbol(s) (e.g., BTC, ETH, SOL) without additional explanation.'
+    
+    headers = {
+        "x-goog-api-key": GEMINI_API,
+        "Content-Type": "application/json"
+    }  
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": f'''{search_prompt} Tweet: {tweet_text}'''
+                    }
+                ]
+            }
+        ],
+        "generationConfig": {
+            "thinkingConfig": {
+                "thinkingBudget": 0
+            }
+        }
+    }
+            
+    response = requests.post(url=GEMINI_URL,json=payload,headers=headers)
+    if response.status_code == 200:
+        result =  response.json()
+        token_mentioned = result['candidates'][0]['content']['parts'][0]['text']
+        if token_mentioned != 'None':
+            token_mentioned = token_mentioned.split(',')
+            return token_mentioned
+        else:
+            empty = []
+            return empty
+    else:
+        empty = []
+        return empty
 
 async def AggregateScore(tickerPriceData:list) ->dict:
     symbol_data = {}
@@ -29,12 +74,15 @@ async def AggregateScore(tickerPriceData:list) ->dict:
     return symbol_data
 
 # tweetData = {'contracts':[1,2,4],'ticker_names':['BTC','ETH','SOL'],'date_tweeted':'2025-07-01 08:08:00'}
-async def TweetdataProcessor(tweetData:dict,timeframe:str,singleHandSearch:str|None=None):
+async def TweetdataProcessor(tweetData:dict,timeframe:str,singleHandSearch:str|None=None,simpleSearch:bool|None=None):
+    # Simple parameter denote to get only the ticker performance without the score
     # url = 'http://127.0.0.1:8000/ticker'
-    # url = 'https://basesearch2.onrender.com/ticker' 
+    # url = 'https://basesearch2.onrender.com/ticker'
     contracts = tweetData['contracts']
     tickers = ' '.join(tweetData['ticker_names'])
     date_tweeted = tweetData['date_tweeted'] 
+    followers = tweetData['followers']
+
     
     if contracts:
         pass
@@ -47,28 +95,35 @@ async def TweetdataProcessor(tweetData:dict,timeframe:str,singleHandSearch:str|N
         response = requests.get(url=Ticker_url,params=params)
         if response.status_code == 200:
             data = response.json()
+            if simpleSearch:
+                data.append({'followers':followers}) # Added Newly
+                return data
             tickers_scores = await asyncio.create_task(AggregateScore(data))
             if singleHandSearch:
-                   tickers_scores['date_tweeted'] = date_tweeted
+                tickers_scores['date_tweeted'] = date_tweeted
             return tickers_scores
         else:
             pass
     
         
 # asyncio.run(TweetdataProcessor(tweetData,'5'))
-async def processUsertweetedTicker_Contract(userTweetData:list,timeframe:str,mode:str|None=None):
+async def processUsertweetedTicker_Contract(userTweetData:list,timeframe:str,mode:str|None=None,simpleSearch:bool |None =None):
     logging.info('Processing User Tweeeted Tickers And Contract')
     username = list(userTweetData.keys())[0]
     userfinalData = {username:[]}
     tweetDatas = list(userTweetData.values())[0]
-    
 
-    userTickerScores_task = [TweetdataProcessor(tweetData,timeframe,mode) for tweetData in tweetDatas]
+    userTickerScores_task = [TweetdataProcessor(tweetData=tweetData,timeframe=timeframe,singleHandSearch=mode,simpleSearch=simpleSearch) for tweetData in tweetDatas]
     userTickerScores = await asyncio.gather(*userTickerScores_task)
-    userfinalData[username] = userTickerScores
+    if simpleSearch and not mode:
+        userfinalData[username] = userTickerScores[0]
+    elif simpleSearch and mode:
+        userfinalData[username] = userTickerScores
+    else:
+        userfinalData[username] = userTickerScores
     return userfinalData
 
-async def RequestUserTweets(username:str,limit=None):
+async def RequestUserTweets(username:str,limit=None) ->dict:
     logging.info('Requesting User Tweets')
     # userTweets_url = 'http://127.0.0.1:8000/SearchUserTweet'
     if limit != None:
@@ -117,92 +172,190 @@ async def tickerCalled_AndScore(results:list) ->dict:
     return userResult
 
 # Entry
-def searchKeyword(keyword:str,date:str,timeframe:str,from_date:str|None = None,limit:int = 1,userTweetLimit=10):
+def searchKeyword(keyword:str,date:str,timeframe:str,from_date:str|None = None,time:str|None=None,simpleSearch:str|None=None,followers_threshold:int|None=None,limit:int = 1,userTweetLimit=10):
+    from datetime import datetime
     logging.info('Activating Searching For Keyword Match On Twitter')
+    tickers = GeminiRefine(keyword,True)
+    if not tickers:
+        # st.error('No Ticker Matching  This Tweet Was Found!! Reconstruct The Keyword!')
+        return {'Error':'No Ticker Matching  This Tweet Was Found!! Reconstruct The Keyword!'}
+   
+
+
+    # SimpleSearch is use to denote the search for Erary tweet account performance
+    # The performance is only the the news that is been search and not  On the thier past Tweets
+
     # call '/search/{keyword}/{date}' with the keyword
     # call /SearchUserTweet' user eachh usernme
     try:
         async def main():
             EarlyTweeters = []
-            url = f'https://basesearchv3-71083952794.europe-west3.run.app/search/{keyword}/{date}'
-            
-            params = {
-                'from_date':from_date,
-                'limit':limit 
-            }
-            
+            url = f'http://127.0.0.1:8000/search/{keyword}/{date}'
+            url = f'https://basesearchv3-71083952794.europe-west3.run.app/{keyword}/{date}'
+            params = {}
+            if from_date and time:
+                params = {
+                    'from_date':from_date,
+                    'limit':limit, 
+                    'time_search': str(time),
+                    'followers':followers_threshold
+                }
+            elif not from_date and time != None :
+                if time:
+                    params = {
+                        'limit':limit, 
+                        'time_search': str(time),
+                        'followers':followers_threshold
+                    }
+            elif not time and from_date != None:
+                params = {
+                    'limit':limit, 
+                    'from_date':from_date,
+                    'followers':followers_threshold
+                    
+                }
+            if not params:
+                return {'Error':'Please Choose Date To Search From'}
             async with aiohttp.ClientSession() as session:
                 async with session.get(url=url,params=params) as response:
                     if response.status == 200:
                         result = await response.json()
-                        if  result:
-                            EarlyTweeters = [earlyTweet['userName'] for earlyTweet in result if earlyTweet]
-                        else:
-                            return {'Error': 'No Early Tweeters!'}
+                        try:
+                            if  result:
+                                EarlyTweeters = [earlyTweet['userName'] for earlyTweet in result if earlyTweet]
+                            else:
+                                return {'Error': 'No Early Tweeters!'}
+                        except:
+                            return {'Error': 'No Tweet Fetched. Try Again Please'}
                     else:
-                        return {'Error': f'Couldnt Request For This Keyword {keyword}'}
+                        return {'Error': f'Couldnt Request For This Keyword {response.status}'}
+            # this is where we call @app.get("/ticker") for processing of ticker
+            # calling with result
+            simpleSearch = True
+            if not simpleSearch:
+                UserTweet_task = [RequestUserTweets(username,userTweetLimit) for username in EarlyTweeters ]
+                userData = await asyncio.gather(*UserTweet_task)
+            else:
+                userData =  [{userdata['userName']: [{'ticker_names': tickers,# ['ADA','BTC'],
+                                                    'contracts':[],
+                                                    'followers':userdata['followers'],
+                                                    'date_tweeted':datetime.strptime(userdata['createdAt'],"%a %b %d %H:%M:%S %z %Y").strftime("%Y-%m-%d %H:%M")+":00"}]
+                                                    } 
+                                                    for userdata in result]
             
-            UserTweet_task = [RequestUserTweets(username,userTweetLimit) for username in EarlyTweeters ]
-            userData = await asyncio.gather(*UserTweet_task)
             logging.info('Fetched User Tweet Data')
+            # print(userData)
+            # st.stop()
             # userData = [{'onah':[{'contracts':[1,2,4],'ticker_names':['btc','sol'],'date_tweeted':'2025-07-22 10:20:00'},{'contracts':[1,2,4],'ticker_names':['btc','sol'],'date_tweeted':'2025-07-21 09:00:00'}]},{'inno':[{'contracts':[1,2,4],'ticker_names':['ltc','sol'],'date_tweeted':'2025-07-22 09:00:00'},{'contracts':[1,2,4],'ticker_names':['ada','bnb'],'date_tweeted':'2025-07-18 10:00:00'}]}]
-            usserDataTask = [processUsertweetedTicker_Contract(userTweetData,timeframe) for userTweetData in userData]
+            usserDataTask = [processUsertweetedTicker_Contract(userTweetData=userTweetData,timeframe=timeframe,simpleSearch=simpleSearch) for userTweetData in userData]
             results = await asyncio.gather(*usserDataTask)
-            userResult = await tickerCalled_AndScore(results)
-            if userResult:
-                return userResult
+            if not simpleSearch:
+                userResult = await tickerCalled_AndScore(results)
+                if userResult:
+                    return userResult
+            else:
+                return results
         userResult = asyncio.run(main())
         return userResult
     except Exception as e:
         return {'Error': f'Error  Occured {e}'}
+   
 
-# for Single users Search
 def SingleUserSearch(Handle:str,timeframe:str,tweet_limit:int=10):
     async def main():
         try:
             mode = 'singleSearch'
             UserTweet = await RequestUserTweets(Handle,tweet_limit)
-            userdata = await processUsertweetedTicker_Contract(UserTweet,timeframe,mode)
-           
-            tickerData = userdata[Handle]
+            # print(UserTweet)
+            userdata = await processUsertweetedTicker_Contract(UserTweet,timeframe,mode=mode,simpleSearch=True)
+            # print('this is data to display',userdata)
+            # display(userdata)
+            
+            # tickerData = userdata[Handle]
         except Exception as e:
             return {'Error':f'The issue is {e}'}
        
         try:  
             logging.info('Reforming Data')  
-            final_data = {}
-            for item in tickerData:
-                if not item:
-                    continue
-                date = item['date_tweeted'][:-8]
-                if date not in final_data:
-                    final_data[date] = {}
-                for key,value in item.items():
                     
-                    if key in final_data[date] and key != 'date_tweeted':
-                        final_data[date][key] +=value
-                    elif key != 'date_tweeted':
-                        final_data[date][key] =value
-            
-            display_data = []
-            for date,ticker_scores in final_data.items():
-                if not ticker_scores:
+            displayObject = []
+            username = list(userdata.keys())[0]
+            tickerPriceInfo = userdata[username]
+            for dateTickersiInfo in tickerPriceInfo:
+                if dateTickersiInfo == None:
                     continue
+                # print(dateTickersiInfo)
+                # st.stop()
 
-                prepare = {
-                    'Date': date,
-                    'Tickers_Called': [ symbol for symbol in ticker_scores.keys()],
-                    'Score':   sum(score for score in ticker_scores.values())
-                }
-                display_data.append(prepare)
-            df = pd.DataFrame(display_data)
+                date = dateTickersiInfo[-2]['date_tweeted']
+                followers = dateTickersiInfo[-1]['followers']
+                for tickernInfo in dateTickersiInfo:
+                    symbol = list(tickernInfo.keys())[0]
+                    timeframeData  = list(tickernInfo.values())[0]
+                    if not isinstance(timeframeData,list):
+                        continue
+                    
+                    displayData = {
+                        'Username':username,
+                        'followers':followers,
+                        'Date' :date,
+                        'Symbol':symbol
+                        
+                    }
+                    for priceData in timeframeData:
+                        displayData['Entry_Price'] = priceData['Entry_Price']
+                        displayData[f'Price_{priceData['timeframe']}'] = priceData['Price']
+                        displayData[f'{priceData['timeframe']}_%_Change'] = priceData['%_Change']
+                        displayData[f'{priceData['timeframe']}_Peak_Price'] = priceData['Peak_Price']
+                    displayObject.append(displayData)
+            df = pd.DataFrame(displayObject)
             return df
         except Exception as e:
-            return {'Error':f'The issue is from {e}'}
-    
+            return {'Error':f'Couldnt Display Data Due to {e}'}
+             
     dataFrame = asyncio.run(main())
+    if 'kolSearch' in st.session_state:
+        del st.session_state['kolSearch']
     return(dataFrame)
              
+
+
+def display(data):
+    displayObject = []
+    for userNameData in data:
+        username = list(userNameData.keys())[0]
+        
+        symbolPriceData = list(userNameData.values())[0]
+        date = symbolPriceData[-1]['date_tweeted']
+        for symbolData in symbolPriceData:
+            # print(symbolData)
+            # sys.exit()
+        
+            symbol = list(symbolData.keys())[0]
+            if not isinstance(symbolData[symbol],list):
+                continue
+            # if symbol == 'date_tweeted':
+            #      continue
+            
+            displayData = {
+                'Username':username,
+                'Date' :date,
+                'Symbol':symbol
+                
+            }
+            timeframeData = list(symbolData.values())[0]
+            for priceData in timeframeData:
+                displayData['Entry_Price'] = priceData['Entry_Price']
+                displayData[f'Price_{priceData['timeframe']}'] = priceData['Price']
+                displayData[f'{priceData['timeframe']}_%_Change'] = priceData['%_Change']
+                displayData[f'{priceData['timeframe']}_Peak_Price'] = priceData['Peak_Price']
+            displayObject.append(displayData)
+        
+    
+    df = pd.DataFrame(displayObject)
+    st.dataframe(df)
+    st.session_state['displayed'] = 'yes'
+
 
 
 

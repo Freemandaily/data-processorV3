@@ -19,14 +19,14 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] - %(message)s'
 )
 
-# with open('key.json','r') as file:
-#     keys = json.load(file)
-#     bearerToken =keys['bearerToken']
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
 
-try:
-    bearerToken =st.secrets['bearer_token']
-except:
-    bearerToken = os.environ.get('bearerToken')
+# try:
+#     bearerToken =st.secrets['bearer_token']
+# except:
+#     bearerToken = os.environ.get('bearerToken')
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -69,6 +69,7 @@ class processor:
         return {'Error':f'Failed Search With Code {response.status_code}.module:TweetData.py'}
 
     def SearchTickerOnCex(self,tickers:str,start_date:str,timeframe:str) ->dict:
+        logging.info('sending Requst For Cex Ticker Search')
         url = 'https://basesearchv3-71083952794.europe-west3.run.app/ticker'
         # url = 'http://127.0.0.1:8000/ticker'
         params ={
@@ -169,6 +170,7 @@ class processor:
             return tweets # Error handling for streamlit
         elif tweets == None:
             st.error('There is no Tweet To Process. Try Again Please')
+            return {'Error':'There is no Tweet To Process. Try Again Please'}
         fetched_Token_details = []
     
         if tweets:

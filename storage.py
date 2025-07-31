@@ -15,7 +15,12 @@ def add_to_csv(tweeted_token:dict)->None:
     logging.info('Foramating Data for Display')
     if 'kolSearch' in st.session_state:
         kolSearch(tweeted_token)
-    if 'linkSearch' not in st.session_state and 'KolSearch' not in st.session_state:
+        st.stop()
+    elif 'SingleSearch' in st.session_state:
+        st.session_state['SingleSearch_Display'] = 'yes'
+        st.dataframe(tweeted_token)
+
+    if ('linkSearch' not in st.session_state and 'kolSearch' not in st.session_state  and 'SingleSearch' not in st.session_state):
         formated_data = []
         tweeted_token = { date:value for date,value in tweeted_token.items() if value}
         if tweeted_token:
@@ -156,17 +161,52 @@ def linkSearchDisplay(data):
             st.toast( 'Succesfully Added Data To Sheet')
 
 def kolSearch(data):
-    rows = []
-    print(data)
-    for username, stats in data.items():
-        row = {
-            'Username': username,
-            'TickerCalled': stats.get('TickerCalled', 0),
-            'TotalScore': stats.get('TotalScore', 0),
-            'AverageScore': stats.get('averageScore', float('nan'))  # Use NaN for missing averageScore
-        }
-        rows.append(row)
+    # rows = []
+    # for username, stats in data.items():
+    #     row = {
+    #         'Username': username,
+    #         'TickerCalled': stats.get('TickerCalled', 0),
+    #         'TotalScore': stats.get('TotalScore', 0),
+    #         'AverageScore': stats.get('averageScore', float('nan'))  # Use NaN for missing averageScore
+    #     }
+    #     rows.append(row)
 
-    # Create DataFrame
-    df = pd.DataFrame(rows, columns=['Username', 'TickerCalled', 'TotalScore', 'AverageScore'])
+    # # Create DataFrame
+    # df = pd.DataFrame(rows, columns=['Username', 'TickerCalled', 'TotalScore', 'AverageScore'])
+    # st.dataframe(df)
+
+    displayObject = []
+    for userNameData in data:
+        username = list(userNameData.keys())[0]
+        
+        symbolPriceData = list(userNameData.values())[0]
+        followers = symbolPriceData[-1]['followers']
+        date = symbolPriceData[-2]['date_tweeted']
+        for symbolData in symbolPriceData:
+            # print(symbolData)
+            # sys.exit()
+        
+            symbol = list(symbolData.keys())[0]
+            if not isinstance(symbolData[symbol],list):
+                continue
+            # if symbol == 'date_tweeted':
+            #      continue
+            
+            displayData = {
+                'Username':username,
+                'followers':followers,
+                'Date' :date,
+                'Symbol':symbol
+                
+            }
+            timeframeData = list(symbolData.values())[0]
+            for priceData in timeframeData:
+                displayData['Entry_Price'] = priceData['Entry_Price']
+                displayData[f'Price_{priceData['timeframe']}'] = priceData['Price']
+                displayData[f'{priceData['timeframe']}_%_Change'] = priceData['%_Change']
+                displayData[f'{priceData['timeframe']}_Peak_Price'] = priceData['Peak_Price']
+            displayObject.append(displayData)
+        
+    df = pd.DataFrame(displayObject)
     st.dataframe(df)
+    st.session_state['displayed'] = 'yes'

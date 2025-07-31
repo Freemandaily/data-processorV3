@@ -22,7 +22,6 @@ class search_state():
 search = search_state()
 
 
-
 def worksForReload(contracts_input,
                    choose_time,
                    choose_date,
@@ -32,6 +31,8 @@ def worksForReload(contracts_input,
                    kolSearch,
                    kolSearch_date,
                    kolSearch_From_date):
+    
+   
     try:
         if st.session_state['contracts_input'] != contracts_input:
             try: 
@@ -93,9 +94,10 @@ def worksForReload(contracts_input,
         pass
 
     try:
-        if st.session_state['follower_threshold'] != follower_threshold:
-            if 'Search_tweets_Contract_displayed' in st.session_state :
-                del st.session_state['Search_tweets_Contract_displayed']
+        # if st.session_state['follower_threshold'] != follower_threshold:
+        #     if 'Search_tweets_Contract_displayed' in st.session_state :
+        #         del st.session_state['Search_tweets_Contract_displayed']
+        pass
     except:
         pass
 
@@ -107,7 +109,7 @@ def worksForReload(contracts_input,
         pass
     
     try:
-        if st.session_state['kolSearch_date']  != kolSearch_date:
+        if st.session_state['kolSearch_date']  != kolSearch_date and 'SingleSearch' not in st.session_state:
             if 'df_data'in st.session_state:
                     del st.session_state['df_data']
            
@@ -132,8 +134,8 @@ with st.sidebar:
     username_url = st.text_input('Enter X Handle Or Tweet Url (Https://..\n')
     timeframe = st.selectbox('Choose A TimeFrame',[7,30,90])
     tweet_limit = st.slider('Total Tweets To Analyze',1,60,1)
-    first_tweet_minute = st.slider('First Tweet Minute After Pool Creation',1,60,1) # GeckoTerminal price indexing changes somethings we use this to toggle price searhc time
-    follower_threshold =  st.slider('Kols Followers Threshold',700,1000,1000)
+    first_tweet_minute = 60 # st.slider('First Tweet Minute After Pool Creation',1,60,1) # GeckoTerminal price indexing changes somethings we use this to toggle price searhc time
+    follower_threshold =  st.slider('Kols Followers Threshold',99,1000,1000)
     st.divider()
     contracts_input = st.text_area('Enter Contracts/Ticker Names',placeholder='4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R\n7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr\nBTC\nETH')
     choose_date = st.date_input(label='Set A Date',value='today')
@@ -142,7 +144,11 @@ with st.sidebar:
     st.subheader('Performance Search')
     kolSearch = st.text_area('Enter Keywords To Search',placeholder='Enter A Market Moving News Here')
     kolSearch_date = st.date_input(label='Set A Date(Mandatory)',value='today')
-    kolSearch_From_date = st.date_input(label='From date(Optional)',value='today')
+    KolSearch_time = st.toggle('Add time')
+    if KolSearch_time:
+        set_time = st.time_input('Search Time',value=None,step=300)
+    kolSearch_From_date = st.date_input(label='From date(Optional)',value=None)
+    
     worksForReload(contracts_input,
                    choose_time,choose_date,
                    first_tweet_minute,
@@ -152,7 +158,7 @@ with st.sidebar:
                    kolSearch_date,
                    kolSearch_From_date)
 
-
+   
     # About = """
     # The Analyst module is tool designed to analyse the impact of influencer tweet on a particular solana based token.
     # Built wih the focused on the solana blockchain,the tool scans the twitter activities of the specified influencer within a choosen timeframe and extracts,
@@ -163,6 +169,7 @@ with st.sidebar:
 
 st.image('data-extract.png')
 def loadsearch(process=None,timeframe=None):
+    
     from datetime import datetime
     logging.info('Loading Search')
     if search.search_with == 'handle':
@@ -280,6 +287,7 @@ def loadsearch(process=None,timeframe=None):
                 return process
         else:
             st.stop()
+
         
 if len(username_url) > 0 and len(contracts_input) > 0 and len(kolSearch) > 0 :
     
@@ -321,6 +329,7 @@ elif len(username_url) > 0 and len(contracts_input) > 0:
         logging.info('Search With Contracts/Ticker Name')
         search.search_with = 'Contracts'
 elif len(username_url) > 0 and  len(kolSearch) > 0 :
+      
     search_option = st.selectbox(
         'Multiple Search Input Detected Choose How To Search',
         ('Search Only With X handle/Url','KolSearch_News'),
@@ -372,52 +381,57 @@ else:
     st.error('Please Enter Where To Search From')
     st.stop()
 
+  
 if search.search_with == 'handle' or  search.search_with == 'link':
+    
+   
     st.session_state['first_tweet_minute'] = int(first_tweet_minute)
     st.session_state['follower_threshold'] = follower_threshold
-    if st.button('Analyse'):
-        logging.info('Started Analyzing..')
-        if 'Search Ticker On Cex' in st.session_state:
-            del st.session_state['Search Ticker On Cex']
-        if 'tokens_data' in st.session_state:
-            del st.session_state['tokens_data']
-        if 'Search_tweets_Contract' in st.session_state: # delete the sessin set to indentify the contract search from x data
-                del st.session_state['Search_tweets_Contract']
+    if 'SingleSearch_Display' not in st.session_state:
+        if st.button('Analyse'):
+            logging.info('Started Analyzing..')
+            if 'Search Ticker On Cex' in st.session_state:
+                del st.session_state['Search Ticker On Cex']
+            if 'tokens_data' in st.session_state:
+                del st.session_state['tokens_data']
+            if 'Search_tweets_Contract' in st.session_state: # delete the sessin set to indentify the contract search from x data
+                    del st.session_state['Search_tweets_Contract']
 
-        if 'df_data' in st.session_state:
-            del st.session_state['df_data']
+            if 'df_data' in st.session_state:
+                del st.session_state['df_data']
 
-        if 'Influencer_data' in st.session_state:
-            del st.session_state['Influencer_data'] 
+            if 'Influencer_data' in st.session_state:
+                del st.session_state['Influencer_data'] 
 
-        process = processor()
-        tweeted_token_details = loadsearch(process,timeframe)
-        if 'Error' in tweeted_token_details:
-            st.error(tweeted_token_details['Error'])
-            st.stop()
-        else:
-            st.toast(f'{search.search_with} Tweets Successfully Processed!')    
-        st.session_state['tweeted_token_details'] = tweeted_token_details # setting this so that for custom timeframe uses it
-
-        if 'linkSearch' not  in st.session_state and 'SingleSearch' not in st.session_state:
-            with st.spinner('Fetching Tweeted Tokens and Price Datas. Please Wait.....'):
-                analyzor = token_tweeted_analyzor(tweeted_token_details) # Removed Token choice
-                st.session_state['Timeframe'] = 5
-            if 'Error' in analyzor:
-                st.error(analyzor['Error'])
+            process = processor()
+            tweeted_token_details = loadsearch(process,timeframe)
+            if 'Error' in tweeted_token_details:
+                st.error(tweeted_token_details['Error'])
                 st.stop()
+            else:
+                st.toast(f'{search.search_with} Tweets Successfully Processed!')    
+            st.session_state['tweeted_token_details'] = tweeted_token_details # setting this so that for custom timeframe uses it
+
+            if 'linkSearch' not  in st.session_state and 'SingleSearch' not in st.session_state:
+                with st.spinner('Fetching Tweeted Tokens and Price Datas. Please Wait.....'):
+                    analyzor = token_tweeted_analyzor(tweeted_token_details) # Removed Token choice
+                    st.session_state['Timeframe'] = 5
+                if 'Error' in analyzor:
+                    st.error(analyzor['Error'])
+                    st.stop()
+        
+                with st.spinner('Storing Tweeted Token(s) Data'):
+                    df_data = add_to_csv(analyzor)  # Adding the tweeted token to cs file
+                if 'Error' in df_data:
+                    st.error(df_data['Error'])
+                    st.stop()
+                st.success( 'Succesfully Analyzed Tweeted Token(s)',icon="✅")
+                time.sleep(1)
+                st.session_state['df_data'] = df_data
+            else:
+                # Link Search
+                st.session_state['df_data'] = tweeted_token_details
     
-            with st.spinner('Storing Tweeted Token(s) Data'):
-                df_data = add_to_csv(analyzor)  # Adding the tweeted token to cs file
-            if 'Error' in df_data:
-                st.error(df_data['Error'])
-                st.stop()
-            st.success( 'Succesfully Analyzed Tweeted Token(s)',icon="✅")
-            time.sleep(1)
-            st.session_state['df_data'] = df_data
-        else:
-            # Link Search
-            st.session_state['df_data'] = tweeted_token_details
 elif search.search_with == 'Contracts':
     if 'SingleSearch' in st.session_state:
         del st.session_state['SingleSearch']
@@ -486,32 +500,46 @@ elif search.search_with == 'Contracts':
             price_datas = process.contracts_price_data
             process.slide(price_datas,next_timeframe)
 elif search.search_with == 'KolSearch':
+    
+    if 'SingleSearch_Display' in st.session_state:
+        del st.session_state['SingleSearch_Display']
     if 'SingleSearch' in st.session_state:
         del st.session_state['SingleSearch']
     if 'linkSearch' in st.session_state :
         del st.session_state['linkSearch']
     timeframe = '20,30,1:0,2:0'
-    TotalUsersToRetrieve = 10
+    TotalUsersToRetrieve = 5
     AnalyzeTweet =  10
     
-    if kolSearch_date: #and 'kolSearch' not in st.session_state:
+    if kolSearch_date and 'displayed' not in st.session_state: #and 'kolSearch' not in st.session_state:
         st.session_state['kolSearch'] =  kolSearch
         st.session_state['kolSearch_date'] = str(kolSearch_date)
         st.session_state['Timeframe'] = timeframe
         with st.spinner(f'Searching Early Tweets On {kolSearch} And Analyzing Account Involves. Please Wait ......'):
+            if KolSearch_time:
+                search_time = set_time
+            else:
+                search_time = None
+            if kolSearch_From_date:
+                
+                kolSearch_From_date= str(kolSearch_From_date)
+            else:
+                kolSearch_From_date = None
             userResult = searchKeyword(
-                kolSearch,
-                str(kolSearch_date),
-                timeframe,
-                str(kolSearch_From_date),
-                TotalUsersToRetrieve,
-                AnalyzeTweet
+                keyword=kolSearch,
+                date=str(kolSearch_date),
+                timeframe=timeframe,
+                from_date=kolSearch_From_date,
+                time=search_time,
+                limit= TotalUsersToRetrieve,
+                userTweetLimit=AnalyzeTweet,
+                followers_threshold= int(follower_threshold)
                 )
-            if 'Error' in userResult:
-                st.error(userResult['Error'])
-                st.stop()
+        if 'Error' in userResult:
+            st.error(userResult['Error'])
+            st.stop()
         st.session_state['df_data'] = userResult
-  
+
 def display(df_data):
     
     from datetime import datetime
@@ -561,20 +589,31 @@ def display(df_data):
                 else:
                     data = process.linkSearch(username_url,timeframe)
         elif 'kolSearch' in st.session_state :
-            # pass
-            TotalUsersToRetrieve = 10
-            AnalyzeTweet =  10
-            data = searchKeyword(
-                kolSearch,
-                str(kolSearch_date),
-                timeframe,
-                str(kolSearch_From_date),
-                TotalUsersToRetrieve,
-                AnalyzeTweet
-                )
-            if 'Error' in data:
-                st.error(data['Error'])
-                st.stop()
+            with st.spinner(f'Searching Early Tweets On {kolSearch} And Analyzing Account Involves. Please Wait ......'):
+                TotalUsersToRetrieve = 5
+                AnalyzeTweet =  10
+                # pass
+                if KolSearch_time:
+                    search_time = set_time
+                else:
+                    search_time = None
+                if kolSearch_From_date:
+                    From_date= str(kolSearch_From_date)
+                else:
+                    From_date = None
+                data = searchKeyword(
+                    keyword=kolSearch,
+                    date=str(kolSearch_date),
+                    timeframe=timeframe,
+                    from_date=From_date,
+                    time=search_time,
+                    limit= TotalUsersToRetrieve,
+                    userTweetLimit=AnalyzeTweet,
+                    followers_threshold=int(follower_threshold)
+                    )
+                if 'Error' in data:
+                    st.error(data['Error'])
+                    st.stop()
         else:
             # tweet_limit = 10
             with st.spinner(F'Procesing {username_url} Tweets With Added Timeframe'):
@@ -619,6 +658,8 @@ def display(df_data):
                 last_row = len(sheet.get_all_values()) + 2
                 set_with_dataframe(sheet, df_data, row=last_row, include_index=False, resize=True)
                 st.toast( 'Succesfully Added Data To Sheet')
-            
+
 if 'df_data' in st.session_state: # For displaying the Tweeted data
     display(st.session_state['df_data'])
+
+

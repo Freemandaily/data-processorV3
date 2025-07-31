@@ -197,20 +197,20 @@ def searchKeyword(keyword:str,date:str,timeframe:str,from_date:str|None = None,t
                     'from_date':from_date,
                     'limit':limit, 
                     'time_search': str(time),
-                    'followers':followers_threshold
+                    'followers_threshold':followers_threshold
                 }
             elif not from_date and time != None :
                 if time:
                     params = {
                         'limit':limit, 
                         'time_search': str(time),
-                        'followers':followers_threshold
+                        'followers_threshold':followers_threshold
                     }
             elif not time and from_date != None:
                 params = {
                     'limit':limit, 
                     'from_date':from_date,
-                    'followers':followers_threshold
+                    'followers_threshold':followers_threshold
                     
                 }
             if not params:

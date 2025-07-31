@@ -1,5 +1,4 @@
 import asyncio
-from importlib import simple
 import sys
 import time,os
 import streamlit as st
@@ -14,12 +13,13 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
+# Ticker_url = 'https://basesearch2.onrender.com/ticker' 
+# SearchUserTweet_url = 'https://basesearch2.onrender.com/SearchUserTweet'
 
-# Ticker_url = 'http://127.0.0.1:8000/ticker'
-# SearchUserTweet_url = 'http://127.0.0.1:8000/SearchUserTweet'
 Ticker_url = 'https://basesearchv3-71083952794.europe-west3.run.app/ticker'
 SearchUserTweet_url = 'https://basesearchv3-71083952794.europe-west3.run.app/SearchUserTweet'
 GEMINI_API = os.environ.get('GEMINIKEY')
+GEMINI_API = 'AIzaSyBTQxOuDtPXPbqhpBiq0bMrO2nbl8Z8e1g' 
 GEMINI_URL =  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
 
@@ -304,9 +304,9 @@ def SingleUserSearch(Handle:str,timeframe:str,tweet_limit:int=10):
                     }
                     for priceData in timeframeData:
                         displayData['Entry_Price'] = priceData['Entry_Price']
-                        displayData[f'Price_{priceData['timeframe']}'] = priceData['Price']
-                        displayData[f'{priceData['timeframe']}_%_Change'] = priceData['%_Change']
-                        displayData[f'{priceData['timeframe']}_Peak_Price'] = priceData['Peak_Price']
+                        displayData[f"Price_{priceData['timeframe']}"] = priceData['Price']
+                        displayData[f"{priceData['timeframe']}_%_Change"] = priceData['%_Change']
+                        displayData[f"{priceData['timeframe']}_Peak_Price"] = priceData['Peak_Price']
                     displayObject.append(displayData)
             df = pd.DataFrame(displayObject)
             return df
@@ -318,46 +318,6 @@ def SingleUserSearch(Handle:str,timeframe:str,tweet_limit:int=10):
         del st.session_state['kolSearch']
     return(dataFrame)
              
-
-
-def display(data):
-    displayObject = []
-    for userNameData in data:
-        username = list(userNameData.keys())[0]
-        
-        symbolPriceData = list(userNameData.values())[0]
-        date = symbolPriceData[-1]['date_tweeted']
-        for symbolData in symbolPriceData:
-            # print(symbolData)
-            # sys.exit()
-        
-            symbol = list(symbolData.keys())[0]
-            if not isinstance(symbolData[symbol],list):
-                continue
-            # if symbol == 'date_tweeted':
-            #      continue
-            
-            displayData = {
-                'Username':username,
-                'Date' :date,
-                'Symbol':symbol
-                
-            }
-            timeframeData = list(symbolData.values())[0]
-            for priceData in timeframeData:
-                displayData['Entry_Price'] = priceData['Entry_Price']
-                displayData[f'Price_{priceData['timeframe']}'] = priceData['Price']
-                displayData[f'{priceData['timeframe']}_%_Change'] = priceData['%_Change']
-                displayData[f'{priceData['timeframe']}_Peak_Price'] = priceData['Peak_Price']
-            displayObject.append(displayData)
-        
-    
-    df = pd.DataFrame(displayObject)
-    st.dataframe(df)
-    st.session_state['displayed'] = 'yes'
-
-
-
 
 # keyword = 'GMX hacked OR Exploited OR Exploit OR Hack'
 # date = '2025-07-09'

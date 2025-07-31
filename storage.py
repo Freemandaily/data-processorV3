@@ -133,7 +133,7 @@ def linkSearchDisplay(data):
             st.session_state['slide_index'] -=1
 
     st.badge(f"Symbol : {symbols[st.session_state['slide_index']]}",color='orange')
-    st.badge(f'Date Time: {date_tweeted}')
+    st.badge(f"Date Time: {date_tweeted}")
     st.dataframe(dataframes[symbols[st.session_state['slide_index']]])
     logging.info('Displayed Data')
 
@@ -202,9 +202,9 @@ def kolSearch(data):
             timeframeData = list(symbolData.values())[0]
             for priceData in timeframeData:
                 displayData['Entry_Price'] = priceData['Entry_Price']
-                displayData[f'Price_{priceData['timeframe']}'] = priceData['Price']
-                displayData[f'{priceData['timeframe']}_%_Change'] = priceData['%_Change']
-                displayData[f'{priceData['timeframe']}_Peak_Price'] = priceData['Peak_Price']
+                displayData[f"Price_{priceData['timeframe']}"] = priceData['Price']
+                displayData[f"{priceData['timeframe']}_%_Change"] = priceData['%_Change']
+                displayData[f"{priceData['timeframe']}_Peak_Price"] = priceData['Peak_Price']
             displayObject.append(displayData)
         
     df = pd.DataFrame(displayObject)

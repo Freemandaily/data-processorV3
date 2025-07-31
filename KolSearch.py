@@ -19,7 +19,6 @@ logging.basicConfig(
 Ticker_url = 'https://basesearchv3-71083952794.europe-west3.run.app/ticker'
 SearchUserTweet_url = 'https://basesearchv3-71083952794.europe-west3.run.app/SearchUserTweet'
 GEMINI_API = os.environ.get('GEMINIKEY')
-GEMINI_API = 'AIzaSyBTQxOuDtPXPbqhpBiq0bMrO2nbl8Z8e1g' 
 GEMINI_URL =  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
 

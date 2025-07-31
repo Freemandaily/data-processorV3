@@ -109,7 +109,7 @@ def worksForReload(contracts_input,
         pass
     
     try:
-        if st.session_state['kolSearch_date']  != kolSearch_date and 'SingleSearch' not in st.session_state:
+        if st.session_state['kolSearch_date']  != str(kolSearch_date) and 'SingleSearch' not in st.session_state:
             if 'df_data'in st.session_state:
                     del st.session_state['df_data']
            

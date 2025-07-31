@@ -190,7 +190,7 @@ def searchKeyword(keyword:str,date:str,timeframe:str,from_date:str|None = None,t
         async def main():
             EarlyTweeters = []
             url = f'http://127.0.0.1:8000/search/{keyword}/{date}'
-            url = f'https://basesearchv3-71083952794.europe-west3.run.app/{keyword}/{date}'
+            url = f'https://basesearchv3-71083952794.europe-west3.run.app/search/{keyword}/{date}'
             params = {}
             if from_date and time:
                 params = {

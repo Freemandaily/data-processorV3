@@ -187,7 +187,7 @@ def loadsearch(process=None,timeframe=None):
             # if 'Error' in tweeted_token_details:
             #     st.stop()
             # return tweeted_token_details
-            timeframe = '1,15,4:0,24:0'
+            timeframe = '1,5,15,4:0,24:0'
             st.session_state['Timeframe'] = timeframe
             # tweet_limit = 20
             data_frame = SingleUserSearch(username_url,timeframe,tweet_limit)
@@ -199,7 +199,7 @@ def loadsearch(process=None,timeframe=None):
     elif search.search_with == 'link':
         logging.info('Searching With Link')
         with st.spinner(f'Processing  Tweets in Url......'):
-            timeframe = '1,15,4:0,24:0'
+            timeframe = '1,5,15,4:0,24:0'
             st.session_state['Timeframe'] = timeframe
             # process.search_with_id(username_url)
             # tweeted_token_details = process.processTweets()  # Enterance to new logic search 
@@ -507,7 +507,7 @@ elif search.search_with == 'KolSearch':
         del st.session_state['SingleSearch']
     if 'linkSearch' in st.session_state :
         del st.session_state['linkSearch']
-    timeframe = '20,30,1:0,2:0'
+    timeframe = '5,20,30,1:0,2:0'
     TotalUsersToRetrieve = 10
     AnalyzeTweet =  10
     

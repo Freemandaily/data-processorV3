@@ -245,7 +245,7 @@ def loadsearch(process=None,timeframe=None):
                 st.session_state['choose_time'] = choose_time
                 combine_date_time =  datetime.combine(choose_date,choose_time)
                 with st.spinner(f'Processing  Search Ticker On Cex......'):
-                    timeframe = '1,5,10,20,30,24:0'
+                    timeframe = '1,5,15,4:0,24:0'
                     st.session_state['Timeframe'] = timeframe
                     tickers = contracts_input
                     start_date = str(combine_date_time)
@@ -507,7 +507,7 @@ elif search.search_with == 'KolSearch':
         del st.session_state['SingleSearch']
     if 'linkSearch' in st.session_state :
         del st.session_state['linkSearch']
-    timeframe = '5,20,30,1:0,2:0'
+    timeframe = '1,5,15,4:0,24:0'
     TotalUsersToRetrieve = 10
     AnalyzeTweet =  10
     

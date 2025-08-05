@@ -476,7 +476,7 @@ elif search.search_with == 'Contracts':
             with st.spinner('Searching Early Tweets Containing Contract.Might Take A While........'):
                 process.search_tweets_with_contract()
             result= process.processTweets()
-            if 'Error' in result:
+            if result != None and  'Error' in result:
                 st.stop()
             with st.spinner('Fetching Tweeted Contract Price Datas. Please Wait.....'):
                 tweeted_Token_details = st.session_state['tweeted_token_details'] 
@@ -661,5 +661,6 @@ def display(df_data):
 
 if 'df_data' in st.session_state: # For displaying the Tweeted data
     display(st.session_state['df_data'])
+
 
 

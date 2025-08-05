@@ -43,12 +43,11 @@ class processor:
         self.username = username
         self.timeframe = timeframe
         try:
-            self.user = self.client.get_user(username=username)
-            self.user_id = self.user.data.id
-            self.end_date = datetime.datetime.now(pytz.UTC).replace(microsecond=0)
-            self.start_date = (self.end_date - timedelta(days=timeframe)).replace(hour=0,minute=0,second=1,microsecond=0)
+            self.user = "" # self.client.get_user(username=username)
+            self.user_id = "" #self.user.data.id
+            self.end_date = "" #datetime.datetime.now(pytz.UTC).replace(microsecond=0)
+            self.start_date = "" # (self.end_date - timedelta(days=timeframe)).replace(hour=0,minute=0,second=1,microsecond=0)
             st.toast(f'@{username} Handle Successfully Loaded')
-            time.sleep(15)
             return {'Success':True}
         except Exception as e:
             time.sleep(2)
@@ -760,4 +759,5 @@ class contractProcessor(processor):
                 last_row = len(sheet.get_all_values()) + 2
                 set_with_dataframe(sheet, df_data, row=last_row, include_index=False, resize=True)
                 st.toast( 'Succesfully Added Data To Sheet')
+
 

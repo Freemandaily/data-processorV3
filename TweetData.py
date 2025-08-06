@@ -22,6 +22,9 @@ logging.basicConfig(
 # with open('key.json','r') as file:
 #     keys = json.load(file)
 #     bearerToken =keys['bearerToken']
+# # print(bearerToken)
+# # st.stop()
+
 
 try:
     bearerToken =st.secrets['bearer_token']
@@ -163,7 +166,7 @@ class processor:
         
     # Start procesing user tweet
     def processTweets(self)->dict: # Entry function
-        logging.info('Proessing Tweets')
+        logging.info('Processing Tweets')
         tweets = self.tweets
         if isinstance(tweets,dict) and 'Error' in tweets:
             return tweets # Error handling for streamlit
@@ -241,8 +244,8 @@ class processor:
                 user_tweets.append(tweet_dict)
             self.tweets = user_tweets
         except Exception as e:
-            logging.error('Failed To Fetch Tweets')
-            Error_message = {'Error':f'Failed To Fetch Tweets Because of  {e}'} # this Error comes because of invali tweet id , configure correctly
+            logging.error(f'Failed To Fetch Tweets  {e}')
+            Error_message = {'Error':f'Failed To Fetch Tweets Because of  '} # this Error comes because of invali tweet id , configure correctly
             self.tweets = Error_message
 
 
@@ -320,8 +323,8 @@ class contractProcessor(processor):
                 
                 return price_data,new_dates_timestamp
         except Exception as e:
-            logging.error("Cant Fetch Price")
-            st.error(f"Cant Fetch Price.Issue: {e}")
+            st.error("Cant Fetch Price")
+            logging.error(f"Cant Fetch Price.Issue: {e}")
 
     async def fetch_ohlc_and_compute(self,session,poolId,network):
             logging.info('Fetching Token Prices With Timefrane')
@@ -358,8 +361,8 @@ class contractProcessor(processor):
                 peak_price = "{:.13f}".format(peak_price).rstrip("0")
 
             except Exception as e:
-                logging.error('Please Choose Timeframe Within Token Traded Price')
-                st.error(f"Please Choose Timeframe Within Token Traded Prices{e}")
+                logging.error(f'Please Choose Timeframe Within Token Traded Price {e}')
+                st.error(f"Please Choose Timeframe Within Token Traded Prices")
                
             try:
                 for price in price_data:
@@ -379,8 +382,8 @@ class contractProcessor(processor):
                             }
                 return price_info
             except Exception as e:
-                logging.error('Please Choose Timeframe Within Token Traded Pricess')
-                st.error(f"Please Choose Timeframe Within Token Traded Pricess{e}")
+                logging.error(f'Please Choose Timeframe Within Token Traded Pricess{e}')
+                st.error(f"Please Choose Timeframe Within Token Traded Prices")
 
    
     async def gecko_price_fetch(self,session,timeframe,poolId,pair=None,network=None) -> dict:
@@ -400,7 +403,8 @@ class contractProcessor(processor):
             }}
             return pair_data_info
         except Exception as e:
-            st.error(f"Please Choose Timeframe Within Token Traded Prices{e}")
+            st.error(f"Please Choose Timeframe Within Token Traded Prices")
+            logging.error(f"Please Choose Timeframe Within Token Traded Prices{e}")
 
     def process_date_time(self,added_minute):
         from datetime import datetime
@@ -476,7 +480,8 @@ class contractProcessor(processor):
                 pairId = result['data']['relationships']['pairs']['data'][0]['id']
                 return poolId,pairId
            except Exception as e:
-               st.error(f'Issue getting the poolId{e}')
+               st.error(f'Issue getting the poolId')
+               logging.error(f'Issue getting the poolId{e}')
 
     async  def fetchNetworkId(self,session,address):
         # 
@@ -618,32 +623,60 @@ class contractProcessor(processor):
         return user_tweet, add
 
     def search_tweets_with_contract(self):
-        logging.info('Searching Tweets for Early Contract Mentions')
         from datetime import datetime,timedelta
+
+        logging.info('Searching Tweets for Early Contract Mentions')
         contract = self.tokens_data[0]['address']
         pool_creation_date = self.pooldate()
-        # st.write(f'This pool Was Created in {pool_creation_date}')
         date = datetime.fromisoformat(pool_creation_date.replace('Z','+00:00'))
+
         first_tweet_minute = st.session_state['first_tweet_minute'] 
         new_date_pool_start = date + timedelta(minutes=first_tweet_minute) # Adjusted the starting time for the pool 1hr after to fetch price in geckoTerminal
+        
         end_date_search = date + timedelta(hours=2)  # this is 2 hours after the pool was created
         start_time = new_date_pool_start.isoformat().replace('+00:00','Z')
         end_date = end_date_search.isoformat().replace('+00:00','Z')
+        
+        add_hour = 0
+        while True:
+            
+            response = self._recent_tweet_search(contract,start_time,end_date)
+            if response != None and 'Error' in response:
+                if add_hour >= 24:
+                    break
+
+                add_hour += 1
+
+                year_time  = end_date[:11]
+                minute_time = end_date[13:]
+                hour = end_date[11:-7]
+
+                hour = end_date[11:13]  
+                new_hour = f"{(int(hour) + add_hour) % 24:02d}"  
+                end_date = year_time + new_hour + minute_time
+            else:
+                break
+            logging.info('Adding Hour to End Date For Another X Search')
+
+    def _recent_tweet_search(self,contract,start_time,end_date):
         users_tweet = [ ]
         try:
             for response in tweepy.Paginator(self.client.search_recent_tweets,
                                     contract,
-                                    start_time= start_time,  #pool_creation_date, 
-                                    end_time=end_date,
+                                    start_time= str(start_time),  #pool_creation_date, 
+                                    end_time= str(end_date),
                                     max_results=100,
                                     limit=5, # consider this (make 5 request)
-                                     user_fields=['public_metrics','username'],
+                                    user_fields=['public_metrics','username'],
                                     tweet_fields=['author_id','created_at','public_metrics'],
                                     expansions=['author_id']):
+                if response.data == None:
+                    return {'Error':'No Tweet At This Date'}
+
                 user_map = {user.id: user for user in response.includes.get('users', [])}
                 for tweet in response.data:
                     user = user_map.get(tweet.author_id)
-                    if user:
+                    if user: 
                         metrics = user.public_metrics
                         username = user.username
                         follower_count = metrics['followers_count']
@@ -664,12 +697,11 @@ class contractProcessor(processor):
                                 'tweet_id':tweet.id
                                 }
                         users_tweet.append(tweet_dict)
+                    
             self.tweets = users_tweet
+            return {'Success':'Added Tweets'}
         except Exception as e:
-            logging.error('Fetching Tweets With Contract Failed')
-            # st.error(f'Fetching Tweets With Contract Failed {e}')
-            # st.stop()
-
+            logging.error(f'Fetching Tweets With Contract Failed {e}')
 
     def NeededData(self,pricedata,timeframe):
         for key,value in pricedata.items():
@@ -759,5 +791,4 @@ class contractProcessor(processor):
                 last_row = len(sheet.get_all_values()) + 2
                 set_with_dataframe(sheet, df_data, row=last_row, include_index=False, resize=True)
                 st.toast( 'Succesfully Added Data To Sheet')
-
 

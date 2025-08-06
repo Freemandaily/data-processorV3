@@ -134,7 +134,7 @@ with st.sidebar:
     username_url = st.text_input('Enter X Handle Or Tweet Url (Https://..\n')
     timeframe = st.selectbox('Choose A TimeFrame',[7,30,90])
     tweet_limit = st.slider('Total Tweets To Analyze',1,60,1)
-    first_tweet_minute = 60 # st.slider('First Tweet Minute After Pool Creation',1,60,1) # GeckoTerminal price indexing changes somethings we use this to toggle price searhc time
+    first_tweet_minute = 25 # st.slider('First Tweet Minute After Pool Creation',1,60,1) # GeckoTerminal price indexing changes somethings we use this to toggle price searhc time
     follower_threshold =  st.slider('Kols Followers Threshold',99,1000,1000)
     st.divider()
     contracts_input = st.text_area('Enter Contracts/Ticker Names',placeholder='4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R\n7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr\nBTC\nETH')
@@ -661,6 +661,7 @@ def display(df_data):
 
 if 'df_data' in st.session_state: # For displaying the Tweeted data
     display(st.session_state['df_data'])
+
 
 
 

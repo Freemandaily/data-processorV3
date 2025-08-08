@@ -730,7 +730,7 @@ class contractProcessor(processor):
 
         logging.info('Searching Tweets for Early Contract/Ticker Mentions')
         
-        if '' in st.session_state:
+        if 'ticker_onchain' in st.session_state:
             pool_creation_date,contract = self._match_Ticker_Onchain()
             # st.write(f'Pool Creation Date: {pool_creation_date}')
         else:
@@ -902,5 +902,6 @@ class contractProcessor(processor):
                 last_row = len(sheet.get_all_values()) + 2
                 set_with_dataframe(sheet, df_data, row=last_row, include_index=False, resize=True)
                 st.toast( 'Succesfully Added Data To Sheet')
+
 
 

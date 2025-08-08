@@ -187,7 +187,7 @@ class processor:
     def processTweets(self)->dict: # Entry function
         logging.info('Processing Tweets')
         tweets = self.tweets
-        st.write(f'This is len of tweets {len(tweets)}')
+        # st.write(f'This is len of tweets {len(tweets)}')
         # with open('test_tweet.json', 'r') as file:
         #     data = json.load(file)
         # #     tweets = data['data']
@@ -228,8 +228,8 @@ class processor:
             #     fetched_Token_details = fetched_Token_details[:earliest_tweet]
             #     # st.write(len(fetched_Token_details)) # to get only 15 tweeet
             tweeted_Token_details = self.Reformat(fetched_Token_details)
-            st.write(f'empty contracts are {self.count}')
-            st.write(f'fill contract are {self.fill}')
+            # st.write(f'empty contracts are {self.count}')
+            # st.write(f'fill contract are {self.fill}')
             if 'Search_tweets_Contract' not  in st.session_state:
                 return tweeted_Token_details
             else:
@@ -902,6 +902,7 @@ class contractProcessor(processor):
                 last_row = len(sheet.get_all_values()) + 2
                 set_with_dataframe(sheet, df_data, row=last_row, include_index=False, resize=True)
                 st.toast( 'Succesfully Added Data To Sheet')
+
 
 
 

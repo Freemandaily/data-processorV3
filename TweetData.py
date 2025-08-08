@@ -38,6 +38,8 @@ class processor:
         self.end_date = None
         self.start_date = None
         self.tweets = None
+        self.fill = 0
+        self.count = 0
     
     def Load_user(self,username,timeframe=7):
         self.username = username
@@ -102,8 +104,10 @@ class processor:
 
                 if find_tickers:
                     find_contracts =  st.session_state['matched_ticker_contracts']
+                    self.fill += 1
                 else:
                     find_contracts = []
+                    self.count += 1
             else:
                 st.error('No Matched Ticker Found! Initialize')
                 pass
@@ -183,7 +187,7 @@ class processor:
     def processTweets(self)->dict: # Entry function
         logging.info('Processing Tweets')
         tweets = self.tweets
-        
+        st.write(f'This is len of tweets {len(tweets)}')
         # with open('test_tweet.json', 'r') as file:
         #     data = json.load(file)
         # #     tweets = data['data']
@@ -224,6 +228,8 @@ class processor:
             #     fetched_Token_details = fetched_Token_details[:earliest_tweet]
             #     # st.write(len(fetched_Token_details)) # to get only 15 tweeet
             tweeted_Token_details = self.Reformat(fetched_Token_details)
+            st.write(f'empty contracts are {self.count}')
+            st.write(f'fill contract are {self.fill}')
             if 'Search_tweets_Contract' not  in st.session_state:
                 return tweeted_Token_details
             else:
@@ -724,7 +730,7 @@ class contractProcessor(processor):
 
         logging.info('Searching Tweets for Early Contract/Ticker Mentions')
         
-        if 'ticker_onchain' in st.session_state:
+        if '' in st.session_state:
             pool_creation_date,contract = self._match_Ticker_Onchain()
             # st.write(f'Pool Creation Date: {pool_creation_date}')
         else:
@@ -896,4 +902,5 @@ class contractProcessor(processor):
                 last_row = len(sheet.get_all_values()) + 2
                 set_with_dataframe(sheet, df_data, row=last_row, include_index=False, resize=True)
                 st.toast( 'Succesfully Added Data To Sheet')
+
 

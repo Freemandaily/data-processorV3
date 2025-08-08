@@ -408,7 +408,7 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe)->dict:
         else:
             count +=1
 
-    st.write(f'empty contract are {count}')
+    # st.write(f'empty contract are {count}')
         
     if 'valid contracts' in st.session_state:
         del st.session_state['valid contracts']
@@ -539,6 +539,7 @@ def fetch_price(pair,tweeted_date,five_minute,ten_minute,fifteen_minute):
 
     price_timeframes = process_pair(pair,tweeted_date,five_minute,ten_minute,fifteen_minute)
     return price_timeframes
+
 
 
 

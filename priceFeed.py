@@ -12,15 +12,11 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] - %(message)s'
 )
 
-# with open('key.json','r') as file:
-#     keys = json.load(file)
-#     moralis = keys['moralis']
-
-# moralis = st.secrets['moralis_key']
-
 class price_with_interval:
     def __init__(self):
         self.token_interval_prices = []
+
+
 
 def fetchPrice(network,pair,tweeted_date,timeframe,poolId): 
     async def Priceswharehouse(session,from_timestamp,to_timestamp,poolId):
@@ -162,10 +158,12 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
     
     # async def main(network,pair,timestamp,timeframe):
     async def main(network,pair,from_timestamp,to_timestamp,timeframe,poolId):
+       
         async with aiohttp.ClientSession() as session:
             task_container = [gecko_price_fetch(session,network,pair,from_timestamp,to_timestamp,timeframe,poolId)]
             pair_price_data = await asyncio.gather(*task_container)
             pair_price_data = [price_data for price_data in pair_price_data if price_data]
+            
             return pair_price_data
 
     # def process_pair(pair,tweeted_date,timeframe):
@@ -316,57 +314,23 @@ def scoring(timeframe,price_change):
         
 
 # Getting the different price timeframe 
-def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
+def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe)->dict:
     logging.info('Fetching Price Of Tweeted Token')
+    identifier = 0   
     structured_data = {}
     for date , token_fetched in tweet_token_detail.items():
         date_object = datetime.strptime(str(token_fetched['date']), "%Y-%m-%d %H:%M")
         date = date_object + timedelta(hours=1)
         # identity = token_fetched['username']
         identity = str(date)
-        identifier = 0 
+       
         
         # structured_data[identifier] = {}
         token_symbol = [symbol[1:].upper() for symbol in token_fetched['Token_names']]
         token_contracts = [contract for contract in token_fetched['contracts']]
+
         username  = token_fetched['username']
-        
-        # fetching price for tickers . shutted down
-        # for jupToken in jup_token_datas: # shut down
-           
-        #     try:
-               
-        #         if jupToken['symbol'].upper() in token_symbol:
-        #                 if 'valid contracts' in st.session_state:
-        #                     if jupToken['address'].upper() not in st.session_state['valid contracts']: # Make sure that only searched contract are matched
-        #                         continue
-        #                 print('Token With Same Symbol Found')
-        #                 timeframe_prices = price_with_interval()
-        #                 pair_address = dexScreener_token_data(jupToken['address']) # Call to get token pair address from dexscreener
-        #                 if 'Error' in pair_address:
-        #                     print(pair_address['Error'])
-        #                     continue
-        #                 structured_data[username][jupToken['address']] = {'pair':pair_address,
-        #                                                             'symbol':jupToken['symbol'],
-        #                                                             'username': username} 
-        #                 price_timeframes = fetchPrice(pair_address,date,5,10,15)
-        #                 # st.write(price_timeframes)
-        #                 # st.stop()
-        #                 price_data = price_timeframes[0][pair_address]
-        #                 structured_data[username][jupToken['address']]['Price_Tweeted_At'] = price_data['5m']['open_price']#fetchPrice(pair_address,date,5,timeframe_prices,get_start_price='YES')
-        #                 structured_data[username][jupToken['address']]['price_5m'] = price_data['5m']['close_price'] #fetchPrice(pair_address,date,5,timeframe_prices) # 5 min timeFrame
-        #                 structured_data[username][jupToken['address']]['5m Drawdown'] = price_data['5m']['max_drawdown']
-        #                 structured_data[username][jupToken['address']]['price_10m'] = price_data['10m']['close_price']#fetchPrice(pair_address,date,10,timeframe_prices) 
-        #                 structured_data[username][jupToken['address']]['10m Drawdown'] = price_data['10m']['max_drawdown']
-        #                 structured_data[username][jupToken['address']]['price_15m'] = price_data['15m']['close_price']#fetchPrice(pair_address,date,15,timeframe_prices)
-        #                 structured_data[username][jupToken['address']]['15m Drawdown'] = price_data['15m']['max_drawdown']
-        #                 structured_data[username][jupToken['address']]['price_5m%Increase'] = percent_increase(structured_data[username][jupToken['address']]['Price_Tweeted_At'],structured_data[username][jupToken['address']]['price_5m'])
-        #                 structured_data[username][jupToken['address']]['price_10m%Increase'] = percent_increase(structured_data[username][jupToken['address']]['Price_Tweeted_At'],structured_data[username][jupToken['address']]['price_10m'])
-        #                 structured_data[username][jupToken['address']]['price_15m%Increase'] = percent_increase(structured_data[username][jupToken['address']]['Price_Tweeted_At'],structured_data[username][jupToken['address']]['price_15m'])
-        #                 timeframe_prices.token_interval_prices = []
-        #     except KeyboardInterrupt :
-        #         Error_message = {'Error':'Application Runs Interrupted','Message':'Fetching Token Price Ranges'}
-        #         return Error_message
+       
         identity = identity + str(identifier)
         structured_data[identity] = { }
         if len(token_contracts) > 0:
@@ -400,6 +364,7 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
                     # updating ids
                     identifier +=1
 
+                
                 if 'Search_tweets_Contract'in st.session_state:
                     structured_data[identity][token_address] = {'username': username,
                                                                 'Followers': token_fetched['followers'],
@@ -408,6 +373,7 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
                                                                 'network':network,
                                                                 'symbol': symbol.split('/')[0]
                                                                     }
+                   
                 else:
                     affirm = pooldate(network,token_address,date)
                     if affirm == False:
@@ -440,10 +406,9 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
                 structured_data[identity][token_address][f'{setTimeframe} Drawdown'] = price_data[f'{setTimeframe}']['max_drawdown']
                 
     
-   
     if 'valid contracts' in st.session_state:
         del st.session_state['valid contracts']
-        
+    
     structured_data= { date:value for date,value in structured_data.items() if value}
     if structured_data:
        if 'df_data' not in st.session_state:

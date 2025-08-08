@@ -22,9 +22,6 @@ logging.basicConfig(
 # with open('key.json','r') as file:
 #     keys = json.load(file)
 #     bearerToken =keys['bearerToken']
-# # print(bearerToken)
-# # st.stop()
-
 
 try:
     bearerToken =st.secrets['bearer_token']
@@ -93,9 +90,27 @@ class processor:
         contract_patterns = r'\b(0x[a-fA-F0-9]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}|T[1-9A-HJ-NP-Za-km-z]{33})\b'
         ticker_partterns = r'\$[A-Za-z0-9_-]+'
 
+        find_contracts = re.findall(contract_patterns,tweet_text)
+        ticker_names = re.findall(ticker_partterns,tweet_text) 
+        
+        if 'ticker_onchain' in st.session_state:
+            ticker_onchain = st.session_state['ticker_onchain']
+
+            if 'matched_ticker_contracts' in st.session_state:
+                # find_contracts = st.session_state['matched_ticker_contracts']
+                find_tickers = list({symbol.upper()[1:] for  symbol in re.findall(r'\$[A-Za-z0-9_-]+',tweet_text) if symbol.upper()[1:] in list(map(str.upper,ticker_onchain))})
+
+                if find_tickers:
+                    find_contracts =  st.session_state['matched_ticker_contracts']
+                else:
+                    find_contracts = []
+            else:
+                st.error('No Matched Ticker Found! Initialize')
+                pass
+
         token_details = {
             'ticker_names' : re.findall(ticker_partterns,tweet_text),
-            'contracts' : re.findall(contract_patterns,tweet_text) 
+            'contracts' : find_contracts
         }
         if 'valid contracts' in st.session_state:
             contracts = [contract for contract in token_details['contracts'] if contract.upper() in st.session_state['valid contracts']]
@@ -168,6 +183,16 @@ class processor:
     def processTweets(self)->dict: # Entry function
         logging.info('Processing Tweets')
         tweets = self.tweets
+        
+        # with open('test_tweet.json', 'r') as file:
+        #     data = json.load(file)
+        # #     tweets = data['data']
+
+        # with open('test_tweet.json', 'w') as file:
+        #     datas = {'data':tweets}
+        #     json.dump(datas,file,indent=4)
+        # st.stop()
+
         if isinstance(tweets,dict) and 'Error' in tweets:
             return tweets # Error handling for streamlit
         elif tweets == None:
@@ -202,7 +227,8 @@ class processor:
             if 'Search_tweets_Contract' not  in st.session_state:
                 return tweeted_Token_details
             else:
-                st.session_state['tweeted_token_details'] = tweeted_Token_details        
+                st.session_state['tweeted_token_details'] = tweeted_Token_details
+                      
         else :
             Error_message = {'Error':f'Not Able To Process {self.username} Tweets! Please check I'}
             if 'Search_tweets_Contract' not  in st.session_state:
@@ -260,6 +286,7 @@ class contractProcessor(processor):
         self.contracts_price_data = []
         self.from_timetamp = 0
         self.to_timestamp = 0
+        self.matched_ticker_contracts = []
         
     
     async def Priceswharehouse(self,session,poolId):
@@ -622,18 +649,95 @@ class contractProcessor(processor):
             add = True
         return user_tweet, add
 
+    """ This matches The Ticker Searched With The Ticker gotten from geckoterminal search"""
+    def _match_Ticker_Onchain(self):
+        from datetime import datetime,timedelta
+
+        if 'ticker_onchain' not in st.session_state:
+            st.error('Error There Is No Ticker To Match Onchain')
+            st.stop()
+        
+        ticker_onchain = self.mint_addresses
+        
+
+        for address in ticker_onchain:
+            url = f'https://app.geckoterminal.com/api/p1/search?query={address}'
+            headers = {
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.0",
+                            "Accept": "application/json",
+                            "Accept-Language": "en-US,en;q=0.5",
+                            "Accept-Encoding": "gzip, deflate",
+                            "Referer": "https://www.geckoterminal.com/",  
+                            "Origin": "https://www.geckoterminal.com",
+                            "Connection": "keep-alive",
+                            "Sec-Fetch-Dest": "empty",
+                            "Sec-Fetch-Mode": "cors",
+                            "Sec-Fetch-Site": "same-origin"
+                        }
+            response = requests.get(url=url,headers=headers)
+
+            contracts = set()
+            pool_date = set()
+            if response.status_code == 200:
+                result = response.json()
+                
+                if result:
+                    pool_datas = result['data']['attributes']['pools']
+
+                    for pool in pool_datas:
+                        network = pool['network']['name']
+
+                        pool_creation_date = datetime.strptime( pool['pool_creation_date'],"%Y-%m-%dT%H:%M:%SZ") #.replace(tzinfo=timezone.utc)
+                        currrent_date = datetime.now()
+
+                        if currrent_date - pool_creation_date > timedelta(days=7):
+                            continue
+                        else:
+                            pool_date.add(pool['pool_creation_date'])
+                            pass 
+
+                        network_chosen = st.session_state['network_chosen']
+
+                        if network.upper() != network_chosen.upper():
+                            continue
+                        
+                        for token in pool['tokens']:
+                            if token['is_base_token']:
+                                token_address = token['address']
+                                contracts.add(token_address)
+            else:
+                st.error(f'Error! Request To Match Ticker Onachain failed with status code: {response.status_code}')
+                st.stop()
+
+        if list(contracts):
+            earliest_pool_date = min(list(pool_date))
+            latest_pool_date = max(list(pool_date))
+        else:
+            st.error(f'There Is No Ticker On Solana Created past 7days That Matches {ticker_onchain[0]} On GeckoTerminal')
+            st.stop()
+
+        st.session_state['matched_ticker_contracts'] = list(contracts)
+        return  earliest_pool_date,ticker_onchain[0] # This Returns the Ticker 
+
     def search_tweets_with_contract(self):
         from datetime import datetime,timedelta
 
-        logging.info('Searching Tweets for Early Contract Mentions')
-        contract = self.tokens_data[0]['address']
-        pool_creation_date = self.pooldate()
+        logging.info('Searching Tweets for Early Contract/Ticker Mentions')
+        
+        if 'ticker_onchain' in st.session_state:
+            pool_creation_date,contract = self._match_Ticker_Onchain()
+            # st.write(f'Pool Creation Date: {pool_creation_date}')
+        else:
+            contract = self.tokens_data[0]['address']
+            pool_creation_date = self.pooldate()
+            # st.write(f'Pool Creation Date: {pool_creation_date}')
+
         date = datetime.fromisoformat(pool_creation_date.replace('Z','+00:00'))
 
         first_tweet_minute = st.session_state['first_tweet_minute'] 
         new_date_pool_start = date + timedelta(minutes=first_tweet_minute) # Adjusted the starting time for the pool 1hr after to fetch price in geckoTerminal
         
-        end_date_search = date + timedelta(hours=2)  # this is 2 hours after the pool was created
+        end_date_search = date + timedelta(hours=3)  # this is 2 hours after the pool was created
         start_time = new_date_pool_start.isoformat().replace('+00:00','Z')
         end_date = end_date_search.isoformat().replace('+00:00','Z')
         
@@ -666,7 +770,7 @@ class contractProcessor(processor):
                                     start_time= str(start_time),  #pool_creation_date, 
                                     end_time= str(end_date),
                                     max_results=100,
-                                    limit=5, # consider this (make 5 request)
+                                    limit=6, # consider this (make 5 request)
                                     user_fields=['public_metrics','username'],
                                     tweet_fields=['author_id','created_at','public_metrics'],
                                     expansions=['author_id']):
@@ -775,7 +879,8 @@ class contractProcessor(processor):
                     next_slide()
         except:
             logging.error('Session Ended: Analyze Data Again')
-            st.error('Session Ended: Analyze Data Again')
+            st.error('Session Ended: Analyze Data Again. Check Your Input Fields')
+            st.stop()
         
         col = st.columns([1,1])
         with col[0]:

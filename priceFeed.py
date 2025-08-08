@@ -318,6 +318,7 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe)->dict:
     logging.info('Fetching Price Of Tweeted Token')
     identifier = 0   
     structured_data = {}
+    count =0
     for date , token_fetched in tweet_token_detail.items():
         date_object = datetime.strptime(str(token_fetched['date']), "%Y-%m-%d %H:%M")
         date = date_object + timedelta(hours=1)
@@ -404,8 +405,11 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe)->dict:
                 entry_to_peak_percent_change = price_data[f'{setTimeframe}']['entry_to_peak']
                 structured_data[identity][token_address][f'{setTimeframe}_Score'] = scoring(timeframe,entry_to_peak_percent_change)
                 structured_data[identity][token_address][f'{setTimeframe} Drawdown'] = price_data[f'{setTimeframe}']['max_drawdown']
-                
-    
+        else:
+            count +=1
+
+    st.write(f'empty contract are {count}')
+        
     if 'valid contracts' in st.session_state:
         del st.session_state['valid contracts']
     
@@ -535,5 +539,6 @@ def fetch_price(pair,tweeted_date,five_minute,ten_minute,fifteen_minute):
 
     price_timeframes = process_pair(pair,tweeted_date,five_minute,ten_minute,fifteen_minute)
     return price_timeframes
+
 
 

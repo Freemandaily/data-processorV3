@@ -150,7 +150,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
         from datetime import datetime
         combine = tweeted_date
         added_minute = added_minute + 1
-        time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S")#.replace(tzinfo=pytz.FixedOffset(60))
+        time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.FixedOffset(60))
         processed_date_time = time_object + timedelta(minutes=added_minute) # added 1 beacuse of how gecko terminal fetch price, price begin at the previou timestamp
         from_timestamp = time_object.timestamp()
         to_timestamp = processed_date_time.timestamp()
@@ -544,5 +544,6 @@ def fetch_price(pair,tweeted_date,five_minute,ten_minute,fifteen_minute):
 
     price_timeframes = process_pair(pair,tweeted_date,five_minute,ten_minute,fifteen_minute)
     return price_timeframes
+
 
 

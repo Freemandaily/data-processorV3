@@ -9,13 +9,13 @@ from TweetData import contractProcessor
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] - %(message)s'
+    format='%(asctime)s [%(levelname)s] - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
 )
 
 class price_with_interval:
     def __init__(self):
         self.token_interval_prices = []
-
 
 
 def fetchPrice(network,pair,tweeted_date,timeframe,poolId): 
@@ -43,10 +43,11 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
         # time.sleep(4)
         for retry in range(retry_time):
             url = f'https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={from_timestamp}&to_timestamp={to_timestamp}&for_update=false&currency=usd&is_inverted=false'
+           
             async with session.get(url=url,headers=headers) as response:
                 if response.status !=200:
                     logging.warning(f"Fetching Price data with {url} Failed . Retrying for {retry} Times")
-                    time.sleep(5)
+                    time.sleep(1)
                     continue
                 result = await response.json()
                 datas = result['data']
@@ -149,7 +150,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
         from datetime import datetime
         combine = tweeted_date
         added_minute = added_minute + 1
-        time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.FixedOffset(60))
+        time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S")#.replace(tzinfo=pytz.FixedOffset(60))
         processed_date_time = time_object + timedelta(minutes=added_minute) # added 1 beacuse of how gecko terminal fetch price, price begin at the previou timestamp
         from_timestamp = time_object.timestamp()
         to_timestamp = processed_date_time.timestamp()
@@ -318,7 +319,12 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe)->dict:
     logging.info('Fetching Price Of Tweeted Token')
     identifier = 0   
     structured_data = {}
-    count =0
+    count = 0
+    
+    # with open('test_tweet.json', 'w') as file:
+    #     datas = {'data':tweet_token_detail}
+    #     json.dump(datas,file,indent=4)
+    # st.stop()
     for date , token_fetched in tweet_token_detail.items():
         date_object = datetime.strptime(str(token_fetched['date']), "%Y-%m-%d %H:%M")
         date = date_object + timedelta(hours=1)
@@ -405,11 +411,10 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe)->dict:
                 entry_to_peak_percent_change = price_data[f'{setTimeframe}']['entry_to_peak']
                 structured_data[identity][token_address][f'{setTimeframe}_Score'] = scoring(timeframe,entry_to_peak_percent_change)
                 structured_data[identity][token_address][f'{setTimeframe} Drawdown'] = price_data[f'{setTimeframe}']['max_drawdown']
-        else:
-            count +=1
 
-    # st.write(f'empty contract are {count}')
-        
+        count += 1     
+    
+    # st.write(f'empty coontracts: {count}')
     if 'valid contracts' in st.session_state:
         del st.session_state['valid contracts']
     
@@ -421,7 +426,7 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe)->dict:
        return structured_data
     else:
         logging.error('Error Fetching Token Price. CHeck If Token Is On GeckoTerminal Yet')
-        Error_message = {'Error':'Error Fetching Token Price. CHeck If Token Is On GeckoTerminal Yet'}
+        Error_message = {'Error':'Empty Price Data'}
         return Error_message
     
 # This fuunction fetches the tweeted contract proce data
@@ -539,7 +544,5 @@ def fetch_price(pair,tweeted_date,five_minute,ten_minute,fifteen_minute):
 
     price_timeframes = process_pair(pair,tweeted_date,five_minute,ten_minute,fifteen_minute)
     return price_timeframes
-
-
 
 

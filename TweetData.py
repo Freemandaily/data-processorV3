@@ -16,7 +16,8 @@ from gspread_dataframe import set_with_dataframe
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] - %(message)s'
+    format='%(asctime)s [%(levelname)s] - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
 )
 
 # with open('key.json','r') as file:
@@ -38,17 +39,17 @@ class processor:
         self.end_date = None
         self.start_date = None
         self.tweets = None
-        self.fill = 0
-        self.count = 0
+        self.fill_contract = 0
+        self.miss_contracts = 0
     
     def Load_user(self,username,timeframe=7):
         self.username = username
         self.timeframe = timeframe
         try:
-            self.user = "" # self.client.get_user(username=username)
-            self.user_id = "" #self.user.data.id
-            self.end_date = "" #datetime.datetime.now(pytz.UTC).replace(microsecond=0)
-            self.start_date = "" # (self.end_date - timedelta(days=timeframe)).replace(hour=0,minute=0,second=1,microsecond=0)
+            self.user =  self.client.get_user(username=username)
+            self.user_id = self.user.data.id
+            self.end_date = datetime.datetime.now(pytz.UTC).replace(microsecond=0)
+            self.start_date =  (self.end_date - timedelta(days=timeframe)).replace(hour=0,minute=0,second=1,microsecond=0)
             st.toast(f'@{username} Handle Successfully Loaded')
             return {'Success':True}
         except Exception as e:
@@ -104,12 +105,12 @@ class processor:
 
                 if find_tickers:
                     find_contracts =  st.session_state['matched_ticker_contracts']
-                    self.fill += 1
+                   
+                    self.fill_contract +=1
                 else:
                     find_contracts = []
-                    self.count += 1
+                    self.miss_contracts +=1
             else:
-                st.error('No Matched Ticker Found! Initialize')
                 pass
 
         token_details = {
@@ -122,7 +123,7 @@ class processor:
         return token_details
 
     # Using X API to fetch user tweets
-    def fetchTweets(self) -> list:
+    def fetchTweets(self,tweet_limit:int=10) -> list:
         logging.info('Fetching User Tweet(s)')
         if self.timeframe == 7:
             request_limit = 1
@@ -147,7 +148,11 @@ class processor:
                             'created_at':tweet.created_at.strftime("%Y-%m-%d %H:%M"),
                             'username': self.username
                         }
+
+                        if len(user_tweets) >= tweet_limit:
+                            break
                         user_tweets.append(tweet_dict)
+
             self.tweets = user_tweets
         except Exception as e:
             logging.error(f'Failed To Fetch Tweets Wait For Sometimes')
@@ -187,16 +192,7 @@ class processor:
     def processTweets(self)->dict: # Entry function
         logging.info('Processing Tweets')
         tweets = self.tweets
-        # st.write(f'This is len of tweets {len(tweets)}')
-        # with open('test_tweet.json', 'r') as file:
-        #     data = json.load(file)
-        # #     tweets = data['data']
-
-        # with open('test_tweet.json', 'w') as file:
-        #     datas = {'data':tweets}
-        #     json.dump(datas,file,indent=4)
-        # st.stop()
-
+        
         if isinstance(tweets,dict) and 'Error' in tweets:
             return tweets # Error handling for streamlit
         elif tweets == None:
@@ -223,22 +219,21 @@ class processor:
                         'tweet_id':tweet['tweet_id']
                     }
                 fetched_Token_details.append(refined_details)
-            # if 'Search_tweets_Contract' not in st.session_state and len(fetched_Token_details) >30:
-            #     earliest_tweet = 30
-            #     fetched_Token_details = fetched_Token_details[:earliest_tweet]
-            #     # st.write(len(fetched_Token_details)) # to get only 15 tweeet
+          
             tweeted_Token_details = self.Reformat(fetched_Token_details)
-            # st.write(f'empty contracts are {self.count}')
-            # st.write(f'fill contract are {self.fill}')
             if 'Search_tweets_Contract' not  in st.session_state:
                 return tweeted_Token_details
             else:
-                st.session_state['tweeted_token_details'] = tweeted_Token_details
-                      
+                st.session_state['tweeted_token_details'] = tweeted_Token_details            
         else :
             Error_message = {'Error':f'Not Able To Process {self.username} Tweets! Please check I'}
             if 'Search_tweets_Contract' not  in st.session_state:
                 return Error_message
+            else:
+                st.error('There is no Tweet To Process. Adjust To Lower Followers Threshold and Try Again')
+                st.stop()
+        
+        
         
     # Get tweet id and user using the provided url
     def Fetch_Id_username_url(self,url):
@@ -667,6 +662,7 @@ class contractProcessor(processor):
         
 
         for address in ticker_onchain:
+            
             url = f'https://app.geckoterminal.com/api/p1/search?query={address}'
             headers = {
                             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.0",
@@ -719,7 +715,7 @@ class contractProcessor(processor):
             earliest_pool_date = min(list(pool_date))
             latest_pool_date = max(list(pool_date))
         else:
-            st.error(f'There Is No Ticker On Solana Created past 7days That Matches {ticker_onchain[0]} On GeckoTerminal')
+            st.error(f'There Is No Ticker On {st.session_state['network_chosen']} Created past 7days That Matches {ticker_onchain[0]} On GeckoTerminal Search')
             st.stop()
 
         st.session_state['matched_ticker_contracts'] = list(contracts)
@@ -736,7 +732,6 @@ class contractProcessor(processor):
         else:
             contract = self.tokens_data[0]['address']
             pool_creation_date = self.pooldate()
-            # st.write(f'Pool Creation Date: {pool_creation_date}')
 
         date = datetime.fromisoformat(pool_creation_date.replace('Z','+00:00'))
 
@@ -751,22 +746,37 @@ class contractProcessor(processor):
         while True:
             
             response = self._recent_tweet_search(contract,start_time,end_date)
+
             if response != None and 'Error' in response:
-                if add_hour >= 24:
+                if add_hour >= 3:
                     break
 
                 add_hour += 1
+                dt = datetime.fromisoformat(end_date.replace('Z','+00:00'))
+                dt += timedelta(hours=1)  # Adjusting end time by substrating an hour
+                end_date = dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+                logging.info('Adding Hour to End Date For Another X Search')
+            elif not isinstance(response,dict) and response.startswith("400 Bad Request"):
+                
+                line = response.splitlines()
+                if len(line) >= 2:
+                    invalid_text = line[1]
 
-                year_time  = end_date[:11]
-                minute_time = end_date[13:]
-                hour = end_date[11:-7]
-
-                hour = end_date[11:13]  
-                new_hour = f"{(int(hour) + add_hour) % 24:02d}"  
-                end_date = year_time + new_hour + minute_time
+                    if invalid_text.startswith("Invalid 'end_time'"):
+                        dt = datetime.fromisoformat(end_date.replace('Z','+00:00'))
+                        dt -= timedelta(hours=1)  # Adjusting end time by substrating an hour
+                        end_date = dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+                        
+                        logging.info('Substrated An Hour to End Date For Another X Search')
+                    else:
+                        logging.error(f'Error: {invalid_text}')
+                else:
+                    logging.error(f'Error: {response}')
+            elif not isinstance(response,dict) and  response.startswith("429 Too Many Requests"):
+                st.error('Too Many Requests. Please Wait For A While')
+                st.stop()
             else:
                 break
-            logging.info('Adding Hour to End Date For Another X Search')
 
     def _recent_tweet_search(self,contract,start_time,end_date):
         users_tweet = [ ]
@@ -785,15 +795,16 @@ class contractProcessor(processor):
 
                 user_map = {user.id: user for user in response.includes.get('users', [])}
                 for tweet in response.data:
+
+                    tweet_date = tweet.created_at.strftime("%Y-%m-%d %H:%M")
+                  
                     user = user_map.get(tweet.author_id)
                     if user: 
                         metrics = user.public_metrics
                         username = user.username
                         follower_count = metrics['followers_count']
                     else:
-                        continue
-                    tweet_date = tweet.created_at.strftime("%Y-%m-%d %H:%M")
-                    # Flter account with low followesr account Out
+                        continue # Flter account with low followesr account Out
                     follower_threshold = st.session_state['follower_threshold']
                     if int(follower_count) < int(follower_threshold):
                         continue
@@ -809,9 +820,11 @@ class contractProcessor(processor):
                         users_tweet.append(tweet_dict)
                     
             self.tweets = users_tweet
+            logging.info(f'Fetched {len(users_tweet)} Tweets')
             return {'Success':'Added Tweets'}
         except Exception as e:
             logging.error(f'Fetching Tweets With Contract Failed {e}')
+            return str(e)
 
     def NeededData(self,pricedata,timeframe):
         for key,value in pricedata.items():
@@ -902,7 +915,4 @@ class contractProcessor(processor):
                 last_row = len(sheet.get_all_values()) + 2
                 set_with_dataframe(sheet, df_data, row=last_row, include_index=False, resize=True)
                 st.toast( 'Succesfully Added Data To Sheet')
-
-
-
 

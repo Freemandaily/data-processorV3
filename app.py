@@ -13,7 +13,8 @@ from KolSearch import searchKeyword,SingleUserSearch
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] - %(message)s'
+    format='%(asctime)s [%(levelname)s] - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
 )
 
 class search_state():
@@ -96,9 +97,9 @@ def worksForReload(contracts_input,
         pass
 
     try:
-        # if st.session_state['follower_threshold'] != follower_threshold:
-        #     if 'Search_tweets_Contract_displayed' in st.session_state :
-        #         del st.session_state['Search_tweets_Contract_displayed']
+        if st.session_state['follower_threshold'] != follower_threshold:
+            if 'Search_tweets_Contract_displayed' in st.session_state :
+                del st.session_state['Search_tweets_Contract_displayed']
         pass
     except:
         pass
@@ -178,30 +179,44 @@ def loadsearch(process=None,timeframe=None):
     
     from datetime import datetime
     logging.info('Loading Search')
-    if search.search_with == 'handle':
-        logging.info('Searching With X Handle')
+    if search.search_with == 'handle_Contract_Search':
         st.session_state['username_url'] = username_url
+        # with st.spinner(f'Loading @{username_url} Handle'):
+        #     userHandler = process.Load_user(username_url,timeframe=timeframe) 
+        # if 'Error' in userHandler:
+        #     st.error(userHandler['Error'])
+        #     st.stop() 
+    
+        logging.info(f'Search Contract From X Data Activated For @{username_url}')
+
         with st.spinner(f'Loading @{username_url} Handle'):
             userHandler = process.Load_user(username_url,timeframe=timeframe) 
-        if 'Error' in userHandler:
-            st.error(userHandler['Error'])
-            st.stop() 
+            if 'Error' in userHandler:
+                st.error(userHandler['Error'])
+                st.stop() 
         
         with st.spinner(f'Processing @{username_url} Tweets'):
+            global tweet_limit
+            process.fetchTweets(tweet_limit)
+            tweeted_token_details = process.processTweets() # For processing  through tweet to find contract Mentinons
+            if 'Error' in tweeted_token_details:
+                st.stop()
+            return tweeted_token_details
+    elif search.search_with == 'handle_Cex_Search':
+        with st.spinner(f'Processing @{username_url} Tweets'):
             # process.fetchTweets()
-            # tweeted_token_details = process.processTweets() For proessing trough tweet to find contract Mentinons
-            # if 'Error' in tweeted_token_details:
-            #     st.stop()
-            # return tweeted_token_details
-            timeframe = '1,5,15,4:0,24:0'
-            st.session_state['Timeframe'] = timeframe
-            # tweet_limit = 20
-            data_frame = SingleUserSearch(username_url,timeframe,tweet_limit)
-            st.session_state['SingleSearch'] = 'yes'
-            if 'linkSearch' in st.session_state :
-                del st.session_state['linkSearch']
-            return data_frame
-
+            # tweeted_token_details = process.processTweets() For processing  trough tweet to find contract Mentinons
+                # if 'Error' in tweeted_token_details:
+                #     st.stop()
+                # return tweeted_token_details
+                timeframe = '1,5,15,4:0,24:0'
+                st.session_state['Timeframe'] = timeframe
+                # tweet_limit = 20
+                data_frame = SingleUserSearch(username_url,timeframe,tweet_limit)
+                st.session_state['SingleSearch'] = 'yes'
+                if 'linkSearch' in st.session_state :
+                    del st.session_state['linkSearch']
+                return data_frame
     elif search.search_with == 'link':
         logging.info('Searching With Link')
         with st.spinner(f'Processing  Tweets in Url......'):
@@ -237,7 +252,7 @@ def loadsearch(process=None,timeframe=None):
 
             network_choice = st.selectbox(
                 'Select Network Ticker Network',
-                ('Solana','Ethereum','Arbitrum','Aptos'),
+                ('Solana','Ethereum','Arbitrum','Aptos','Ton','Base'),
                 index=None,
                 placeholder='Choose Network'
             )
@@ -315,7 +330,7 @@ def loadsearch(process=None,timeframe=None):
                     time.sleep(2)
                     text_inputs  = contracts_input.split('\n')
                     if 'ticker_onchain' in st.session_state:
-                        contracts = [ text.strip() for text in text_inputs if text.strip() != '']
+                        contracts = [ f'{text.strip()}' for text in text_inputs if text.strip() != '']
                     else:
                         contracts = [text for text in text_inputs if not text.startswith('0x') or len(text) >= 32]
                     
@@ -425,8 +440,24 @@ else:
     st.error('Please Enter Where To Search From')
     st.stop()
 
+
 if search.search_with == 'handle' or  search.search_with == 'link':
-    
+
+    if search.search_with == 'handle':
+        search_option = st.selectbox(
+                f'How Do You Want To Search @{username_url} Tweets?',
+                ('Search CEX Ticker From X Data','Search Contract From X Data'),
+                index=None,
+                placeholder='Choose Search Option'
+                )
+        
+        if search_option == 'Search CEX Ticker From X Data':
+            search.search_with = 'handle_Cex_Search'
+        elif search_option == 'Search Contract From X Data':
+            search.search_with = 'handle_Contract_Search'
+        else:
+            st.stop()
+        
     st.session_state['first_tweet_minute'] = int(first_tweet_minute)
     st.session_state['follower_threshold'] = follower_threshold
     if 'SingleSearch_Display' not in st.session_state:
@@ -519,7 +550,9 @@ elif search.search_with == 'Contracts':
         if 'Search_tweets_Contract' in st.session_state and  'Search_tweets_Contract_displayed' not in st.session_state :
             with st.spinner('Searching Early Tweets Containing Contract.Might Take A While........'):
                 process.search_tweets_with_contract()
+                pass
             result= process.processTweets()
+
 
             if result != None and  'Error' in result:
                 st.stop()

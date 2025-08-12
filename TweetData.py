@@ -20,14 +20,13 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S',
 )
 
-# with open('key.json','r') as file:
-#     keys = json.load(file)
-#     bearerToken =keys['bearerToken']
-
 try:
     bearerToken =st.secrets['bearer_token']
 except:
     bearerToken = os.environ.get('bearerToken')
+
+RAPID_API_KEY  =  os.environ.get('RAPID_API_KEY')
+
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -721,6 +720,87 @@ class contractProcessor(processor):
         st.session_state['matched_ticker_contracts'] = list(contracts)
         return  earliest_pool_date,ticker_onchain[0] # This Returns the Ticker 
 
+
+    """ This Function Uses Rapid Api To Search for Ticker mention Onchain"""
+    def _ticker_onchain(self,ticker:str,start_time:str,end_time:str):
+        from datetime import datetime
+
+        logging.info('Fetching Ticker Mentions On Twitter')
+        conv_start_time = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+        conv_end_time = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+
+        start_time = conv_start_time.strftime("%Y-%m-%d_%H:%M:%S_UTC")
+        end_time = conv_end_time.strftime("%Y-%m-%d_%H:%M:%S_UTC")
+
+
+        url = "https://twitter-api45.p.rapidapi.com/search.php"
+        params = {
+            "query": f"${ticker} until:{end_time} since:{start_time}",
+            'cursor': '',
+            "search_type": "Top"
+        }
+
+        headers = {
+            "x-rapidapi-key": RAPID_API_KEY,
+            "x-rapidapi-host": "twitter-api45.p.rapidapi.com"
+        }
+        
+        users_tweet = [ ]
+        while True:
+                    
+            response = requests.get(url, headers=headers, params=params)
+            if response.status_code == 200:
+                result = response.json()
+                # with open('ticker_search.json','r') as file:
+                #     result = json.load(file)
+
+                
+                time_line = result['timeline']
+
+                if time_line:
+                    for tweet in time_line:
+                        if tweet['type'] == 'tweet':
+                            created_at = tweet['created_at']
+                            dt = datetime.strptime(created_at, "%a %b %d %H:%M:%S %z %Y")
+                            tweet_date = dt.strftime("%Y-%m-%d %H:%M")
+
+                            tweet_text = tweet['text']
+                            tweet_id = tweet['tweet_id']
+                            username = tweet['screen_name']
+                            followers = tweet['user_info']['followers_count']
+
+                            follower_threshold = st.session_state['follower_threshold']
+                            if int(followers) < int(follower_threshold):
+                                continue
+                            users_tweet,affirm = self.checkDuplicateUser(users_tweet,username,tweet_date)
+                            if affirm is True:
+                                tweet_dict = {
+                                        'tweet_text':tweet_text,
+                                        'created_at':tweet_date,
+                                        'username': username,
+                                        'followers':followers,
+                                        'tweet_id':tweet_id
+                                        }
+                                users_tweet.append(tweet_dict)
+
+                else:
+                    logging.error('There is no tweet')
+
+                if result['next_cursor'] is not None and result['next_cursor'] != params['cursor']:
+                    params['cursor'] = result['next_cursor'] 
+                else:
+                    break
+            else:
+                st.error('Couldnt Request To Fetch Ticker Mention On X')
+        
+        if users_tweet:
+            self.tweets = users_tweet
+            
+            return {'success':'Yes'}
+        else:
+            return {'Error': f'There Is No Tweet Mentioning {ticker}'}
+
+
     def search_tweets_with_contract(self):
         from datetime import datetime,timedelta
 
@@ -728,7 +808,6 @@ class contractProcessor(processor):
         
         if 'ticker_onchain' in st.session_state:
             pool_creation_date,contract = self._match_Ticker_Onchain()
-            # st.write(f'Pool Creation Date: {pool_creation_date}')
         else:
             contract = self.tokens_data[0]['address']
             pool_creation_date = self.pooldate()
@@ -738,14 +817,17 @@ class contractProcessor(processor):
         first_tweet_minute = st.session_state['first_tweet_minute'] 
         new_date_pool_start = date + timedelta(minutes=first_tweet_minute) # Adjusted the starting time for the pool 1hr after to fetch price in geckoTerminal
         
-        end_date_search = date + timedelta(hours=3)  # this is 2 hours after the pool was created
+        end_date_search = date + timedelta(hours=2)  # this is 2 hours after the pool was created
         start_time = new_date_pool_start.isoformat().replace('+00:00','Z')
         end_date = end_date_search.isoformat().replace('+00:00','Z')
         
         add_hour = 0
         while True:
             
-            response = self._recent_tweet_search(contract,start_time,end_date)
+            if 'ticker_onchain' in st.session_state:
+                response = self._ticker_onchain(contract,start_time,end_date)
+            else:
+                response = self._recent_tweet_search(contract,start_time,end_date)
 
             if response != None and 'Error' in response:
                 if add_hour >= 3:

@@ -18,6 +18,14 @@ def add_to_csv(tweeted_token:dict)->None:
         st.stop()
     elif 'SingleSearch' in st.session_state:
         st.session_state['SingleSearch_Display'] = 'yes'
+        
+        if 'Ai_response' in st.session_state:
+            Ai_response = st.session_state['Ai_response']
+
+            # st.markdown(f"""
+            # {Ai_response}
+            # """)
+            st.markdown(f":rainbow-background[{Ai_response}]")
         st.dataframe(tweeted_token)
 
     if ('linkSearch' not in st.session_state and 'kolSearch' not in st.session_state  and 'SingleSearch' not in st.session_state):

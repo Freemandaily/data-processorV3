@@ -1,4 +1,5 @@
 import asyncio
+import json
 import sys
 import time,os
 import streamlit as st
@@ -25,9 +26,27 @@ GEMINI_URL =  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.
 
 
 
-def GeminiRefine(tweet_text:str,prompt:str|None=None):
+def GeminiRefine(tweet_text:str=None,Ai_assits_Data:dict=None):
     search_prompt = f'You are an expert at analyzing cryptocurrency-related tweets and news. Based on the context of the provided text, extract the ticker symbol(s) of the main cryptocurrency or token being discussed. If the text focuses on a crypto platform (e.g., an exchange or blockchain) rather than a specific token, identify and return the ticker symbol of the platform’s native token, if applicable (e.g., Telegram → TON, Binance → BNB). If the text mentions a founder, team member, or associate tied to a cryptocurrency or platform, extract the ticker symbol of the specific token associated with them (e.g., Pavel Durov → TON, Vitalik Buterin → ETH, Anatoly Yakovenko → SOL). Use known associations between founders, platforms, and tokens to infer the token even if not explicitly mentioned. If multiple tokens are mentioned, prioritize the token(s) that are the primary focus of the text based on context. If no specific token, platform, or founder is mentioned, or if the focus is unclear, return "None." Only return the ticker symbol(s) (e.g., BTC, ETH, SOL) without additional explanation.'
-    
+    Ai_prompt = f"""
+        I have token performance data after Twitter calls. 
+        Each value is the % change in price relative to the tweet timestamp 
+        at different timeframes (1m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 12h, 24h).
+
+        Data: {Ai_assits_Data}
+
+        Task:
+        1. Calculate the average % return for each timeframe across all tokens.
+        2. Identify the single best timeframe (minutes or hours) that gives the highest average return.
+        3. Provide ONLY:
+            - The recommended timeframe and  the average percentage increase from this timeframe, by formating  it this way "Recommended Timeframe: Answer."
+            - One concise explaining why that timeframe was chosen.
+        """
+    if Ai_assits_Data:
+        Ai_input_data = f'''{Ai_prompt} Data: {Ai_assits_Data}'''
+    else:
+        Ai_input_data = f'''{search_prompt} Tweet: {tweet_text}'''
+
     headers = {
         "x-goog-api-key": GEMINI_API,
         "Content-Type": "application/json"
@@ -37,7 +56,7 @@ def GeminiRefine(tweet_text:str,prompt:str|None=None):
             {
                 "parts": [
                     {
-                        "text": f'''{search_prompt} Tweet: {tweet_text}'''
+                        "text": Ai_input_data
                     }
                 ]
             }
@@ -53,6 +72,10 @@ def GeminiRefine(tweet_text:str,prompt:str|None=None):
     if response.status_code == 200:
         result =  response.json()
         token_mentioned = result['candidates'][0]['content']['parts'][0]['text']
+
+        if Ai_assits_Data:
+            return token_mentioned
+       
         if token_mentioned != 'None':
             token_mentioned = token_mentioned.split(',')
             return token_mentioned
@@ -74,7 +97,7 @@ async def AggregateScore(tickerPriceData:list) ->dict:
 
 # tweetData = {'contracts':[1,2,4],'ticker_names':['BTC','ETH','SOL'],'date_tweeted':'2025-07-01 08:08:00'}
 async def TweetdataProcessor(tweetData:dict,timeframe:str,singleHandSearch:str|None=None,simpleSearch:bool|None=None):
-    # Simple parameter denote to get only the ticker performance without the score
+    # Simple parameter denotes to get only the ticker performance without the score
     # url = 'http://127.0.0.1:8000/ticker'
     # url = 'https://basesearch2.onrender.com/ticker'
     contracts = tweetData['contracts']
@@ -82,15 +105,15 @@ async def TweetdataProcessor(tweetData:dict,timeframe:str,singleHandSearch:str|N
     date_tweeted = tweetData['date_tweeted'] 
     followers = tweetData['followers']
 
-    
     if contracts:
         pass
     if tickers:
         params ={
         'tickers':tickers,
         'start_date':date_tweeted,
-        'timeframe':timeframe
+        'timeframe':timeframe,
         }
+
         response = requests.get(url=Ticker_url,params=params)
         if response.status_code == 200:
             data = response.json()
@@ -104,8 +127,6 @@ async def TweetdataProcessor(tweetData:dict,timeframe:str,singleHandSearch:str|N
         else:
             pass
     
-        
-# asyncio.run(TweetdataProcessor(tweetData,'5'))
 async def processUsertweetedTicker_Contract(userTweetData:list,timeframe:str,mode:str|None=None,simpleSearch:bool |None =None):
     logging.info('Processing User Tweeeted Tickers And Contract')
     username = list(userTweetData.keys())[0]
@@ -174,22 +195,22 @@ async def tickerCalled_AndScore(results:list) ->dict:
 def searchKeyword(keyword:str,date:str,timeframe:str,from_date:str|None = None,time:str|None=None,simpleSearch:str|None=None,followers_threshold:int|None=None,limit:int = 1,userTweetLimit=10):
     from datetime import datetime
     logging.info('Activating Searching For Keyword Match On Twitter')
-    tickers = GeminiRefine(keyword,True)
+    tickers = GeminiRefine(keyword)
     if not tickers:
         # st.error('No Ticker Matching  This Tweet Was Found!! Reconstruct The Keyword!')
         return {'Error':'No Ticker Matching  This Tweet Was Found!! Reconstruct The Keyword!'}
    
 
 
-    # SimpleSearch is use to denote the search for Erary tweet account performance
+    # SimpleSearch is use to denote the search for Early tweet account performance
     # The performance is only the the news that is been search and not  On the thier past Tweets
 
     # call '/search/{keyword}/{date}' with the keyword
-    # call /SearchUserTweet' user eachh usernme
+    # call /SearchUserTweet' with eachh usernme
     try:
         async def main():
             EarlyTweeters = []
-            url = f'http://127.0.0.1:8000/search/{keyword}/{date}'
+            # url = f'http://127.0.0.1:8000/search/{keyword}/{date}'
             url = f'https://basesearchv3-71083952794.europe-west3.run.app/search/{keyword}/{date}'
             params = {}
             if from_date and time:
@@ -243,8 +264,7 @@ def searchKeyword(keyword:str,date:str,timeframe:str,from_date:str|None = None,t
                                                     for userdata in result]
             
             logging.info('Fetched User Tweet Data')
-            # print(userData)
-            # st.stop()
+           
             # userData = [{'onah':[{'contracts':[1,2,4],'ticker_names':['btc','sol'],'date_tweeted':'2025-07-22 10:20:00'},{'contracts':[1,2,4],'ticker_names':['btc','sol'],'date_tweeted':'2025-07-21 09:00:00'}]},{'inno':[{'contracts':[1,2,4],'ticker_names':['ltc','sol'],'date_tweeted':'2025-07-22 09:00:00'},{'contracts':[1,2,4],'ticker_names':['ada','bnb'],'date_tweeted':'2025-07-18 10:00:00'}]}]
             usserDataTask = [processUsertweetedTicker_Contract(userTweetData=userTweetData,timeframe=timeframe,simpleSearch=simpleSearch) for userTweetData in userData]
             results = await asyncio.gather(*usserDataTask)
@@ -264,15 +284,24 @@ def SingleUserSearch(Handle:str,timeframe:str,tweet_limit:int=10):
     async def main():
         try:
             mode = 'singleSearch'
-            UserTweet = await RequestUserTweets(Handle,tweet_limit)
-            # print(UserTweet)
-            userdata = await processUsertweetedTicker_Contract(UserTweet,timeframe,mode=mode,simpleSearch=True)
-            # print('this is data to display',userdata)
-            # display(userdata)
+            timeframe_for_ai = '1,5,15,30,1:0,2:0,4:0,6:0,12:0,24:0'
+           
+            UserTweet = await RequestUserTweets(Handle,tweet_limit) # activate later
             
-            # tickerData = userdata[Handle]
+            userdata = asyncio.create_task(processUsertweetedTicker_Contract(UserTweet,timeframe,mode=mode,simpleSearch=True))
+            userdata_for_Ai = asyncio.create_task( processUsertweetedTicker_Contract(UserTweet,timeframe_for_ai,mode=mode,simpleSearch=True))
+            
+            userdata =  await userdata
+            userdata_for_Ai  = await userdata_for_Ai
+
+            Ai_response = GeminiRefine(Ai_assits_Data=userdata_for_Ai)
+
+            """ Set The Ai Response In Session To Be Used Later"""
+            st.session_state['Ai_response'] = Ai_response
+            
         except Exception as e:
-            return {'Error':f'The issue is {e}'}
+            print(e)
+            return {'Error':f'Unable To Process User Tweets!'}
        
         try:  
             logging.info('Reforming Data')  
@@ -280,11 +309,10 @@ def SingleUserSearch(Handle:str,timeframe:str,tweet_limit:int=10):
             displayObject = []
             username = list(userdata.keys())[0]
             tickerPriceInfo = userdata[username]
+
             for dateTickersiInfo in tickerPriceInfo:
                 if dateTickersiInfo == None:
                     continue
-                # print(dateTickersiInfo)
-                # st.stop()
 
                 date = dateTickersiInfo[-2]['date_tweeted']
                 followers = dateTickersiInfo[-1]['followers']
@@ -302,12 +330,15 @@ def SingleUserSearch(Handle:str,timeframe:str,tweet_limit:int=10):
                         
                     }
                     for priceData in timeframeData:
+                       
                         displayData['Entry_Price'] = priceData['Entry_Price']
                         displayData[f"Price_{priceData['timeframe']}"] = priceData['Price']
                         displayData[f"{priceData['timeframe']}_%_Change"] = priceData['%_Change']
                         displayData[f"{priceData['timeframe']}_Peak_Price"] = priceData['Peak_Price']
                     displayObject.append(displayData)
+
             df = pd.DataFrame(displayObject)
+            
             return df
         except Exception as e:
             return {'Error':f'Couldnt Display Data Due to {e}'}
@@ -317,18 +348,28 @@ def SingleUserSearch(Handle:str,timeframe:str,tweet_limit:int=10):
         del st.session_state['kolSearch']
     return(dataFrame)
              
+def prepare_For_Ai(userdata):
+    username = list(userdata.keys())[0]
+    tickerPriceInfo = userdata[username]
 
-# keyword = 'GMX hacked OR Exploited OR Exploit OR Hack'
-# date = '2025-07-09'
-# timeframe = '10,20'
-# from_date = '2025-07-08'
-# early_limit = 5
-# userTweetToFetch = 5
-# asyncio.run(searchKeyword(keyword,date,timeframe,from_date,early_limit,userTweetToFetch))
+    data_for_Ai_processing = {}
+    count = 0
+    for dateTickersiInfo in tickerPriceInfo:
+        if dateTickersiInfo == None:
+            continue
 
+        for tickernInfo in dateTickersiInfo:
+            symbol = list(tickernInfo.keys())[0]
+            timeframeData  = list(tickernInfo.values())[0]
+            if not isinstance(timeframeData,list):
+                continue
+            
+            data_for_Ai_processing[f'{count}_{symbol}'] = {}
+            for priceData in timeframeData:
+                data_for_Ai_processing[f'{count}_{symbol}'][f"{priceData['timeframe']}"] = priceData['%_Change']
+            count += 1
+    return data_for_Ai_processing
 
-
-    
 
 
 

@@ -696,10 +696,7 @@ def display(df_data):
                 prepare_for_AI = st.session_state['prepare_for_AI']
                 Ai_response = GeminiRefine(Ai_assits_Data=prepare_for_AI)
 
-                st.markdown(f"""
-                    {Ai_response}
-                """)
-
+                st.markdown(f":rainbow-background[{Ai_response}]")
 
         st.dataframe(df_data)
 
@@ -736,5 +733,6 @@ def display(df_data):
 
 if 'df_data' in st.session_state: # For displaying the Tweeted data
     display(st.session_state['df_data'])
+
 
 

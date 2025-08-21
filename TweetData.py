@@ -20,12 +20,14 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S',
 )
 
+
 try:
     bearerToken =st.secrets['bearer_token']
 except:
     bearerToken = os.environ.get('bearerToken')
 
 RAPID_API_KEY  =  os.environ.get('RAPID_API_KEY')
+
 
 
 class processor:
@@ -121,42 +123,102 @@ class processor:
             token_details['contracts'] = contracts
         return token_details
 
-    # Using X API to fetch user tweets
-    def fetchTweets(self,tweet_limit:int=10) -> list:
-        logging.info('Fetching User Tweet(s)')
-        if self.timeframe == 7:
-            request_limit = 1
-        else:
-            request_limit = 1
+
+    def fetchTweets(self,username:str,tweet_limit:int):
+        from datetime import datetime
+        url = "https://twitter-api45.p.rapidapi.com/timeline.php"
+        params = {
+            'screenname':username,
+            'cursor': ''
+        }
+
+        headers = {
+            "x-rapidapi-key": RAPID_API_KEY,
+            "x-rapidapi-host": "twitter-api45.p.rapidapi.com"
+        }
+
         user_tweets = []
+        keep_fetching = True
+
+        
         try:
-            for response in tweepy.Paginator(self.client.get_users_tweets,
-                                            id=self.user_id,
-                                            start_time=self.start_date, 
-                                            end_time=self.end_date,
-                                            exclude='replies',
-                                            max_results=100,
-                                            limit=request_limit, # consider this
-                                            tweet_fields='created_at'):
+            while keep_fetching:
+                        
+                response = requests.get(url, headers=headers, params=params)
+                if response.status_code == 200:
+                    result = response.json()
+
+                    timeline = result['timeline']
+
+                    if timeline:
+                        for tweet in timeline:
+                            created_at = tweet['created_at']
+                            dt = datetime.strptime(created_at, "%a %b %d %H:%M:%S %z %Y")
+                            tweet_date = dt.strftime("%Y-%m-%d %H:%M")
+
+                            tweet_dict = {
+                                'tweet_id':tweet['tweet_id'],
+                                'tweet_text':tweet['text'],
+                                'created_at':tweet_date,
+                                'username':username
+                            }
+
+                            if len(user_tweets) >= tweet_limit:
+                                keep_fetching = False
+                                break
+                            user_tweets.append(tweet_dict)
+                    else:
+                        logging.error('There is no tweet')
+
+                    if result['next_cursor'] is not None and result['next_cursor'] != params['cursor']:
+                        params['cursor'] = result['next_cursor'] 
+                    else:
+                        break
+                else:
+                    st.error('Couldnt Requuest For User Data')
                 
-                if response.data:
-                    for tweet in response.data:
-                        tweet_dict = {
-                            'tweet_id':tweet.id,
-                            'tweet_text':tweet.text,
-                            'created_at':tweet.created_at.strftime("%Y-%m-%d %H:%M"),
-                            'username': self.username
-                        }
-
-                        if len(user_tweets) >= tweet_limit:
-                            break
-                        user_tweets.append(tweet_dict)
-
-            self.tweets = user_tweets
-        except Exception as e:
+               
+        except Exception as e:  
             logging.error(f'Failed To Fetch Tweets Wait For Sometimes')
             Error_message = {'Error':f'Failed To Fetch Tweets Because of  {e}\n Wait For Sometimes'}
             self.tweets = Error_message
+
+    # Using X API to fetch user tweets
+    # def fetchTweets(self,tweet_limit:int=10) -> list:
+    #     logging.info('Fetching User Tweet(s)')
+    #     if self.timeframe == 7:
+    #         request_limit = 1
+    #     else:
+    #         request_limit = 1
+    #     user_tweets = []
+    #     try:
+    #         for response in tweepy.Paginator(self.client.get_users_tweets,
+    #                                         id=self.user_id,
+    #                                         start_time=self.start_date, 
+    #                                         end_time=self.end_date,
+    #                                         exclude='replies',
+    #                                         max_results=100,
+    #                                         limit=request_limit, # consider this
+    #                                         tweet_fields='created_at'):
+                
+    #             if response.data:
+    #                 for tweet in response.data:
+    #                     tweet_dict = {
+    #                         'tweet_id':tweet.id,
+    #                         'tweet_text':tweet.text,
+    #                         'created_at':tweet.created_at.strftime("%Y-%m-%d %H:%M"),
+    #                         'username': self.username
+    #                     }
+
+    #                     if len(user_tweets) >= tweet_limit:
+    #                         break
+    #                     user_tweets.append(tweet_dict)
+
+    #         self.tweets = user_tweets
+    #     except Exception as e:  
+    #         logging.error(f'Failed To Fetch Tweets Wait For Sometimes')
+    #         Error_message = {'Error':f'Failed To Fetch Tweets Because of  {e}\n Wait For Sometimes'}
+    #         self.tweets = Error_message
        
     # format the data to a suitable data type
     def Reformat(self,fetched_Token_details:list) -> dict:
@@ -782,7 +844,6 @@ class contractProcessor(processor):
                                         'tweet_id':tweet_id
                                         }
                                 users_tweet.append(tweet_dict)
-
                 else:
                     logging.error('There is no tweet')
 
@@ -808,6 +869,7 @@ class contractProcessor(processor):
         
         if 'ticker_onchain' in st.session_state:
             pool_creation_date,contract = self._match_Ticker_Onchain()
+            # st.write(f'Pool Creation Date: {pool_creation_date}')
         else:
             contract = self.tokens_data[0]['address']
             pool_creation_date = self.pooldate()

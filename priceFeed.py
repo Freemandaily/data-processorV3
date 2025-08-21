@@ -129,7 +129,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
             if not time_frame_Task:
                 pass_check = []
                 return pass_check
-            if int(timeframe) > 60:
+            if int(timeframe) >= 60:
                 hour = str(timeframe //60)
                 minutes = timeframe %60
                 timeframe = f'{hour}:{minutes}m'  if minutes > 0  else f'{hour}hr(s)' 
@@ -320,11 +320,10 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe)->dict:
     identifier = 0   
     structured_data = {}
     count = 0
+    Ai_count = 0
+
+    prepare_for_AI = {}
     
-    # with open('test_tweet.json', 'w') as file:
-    #     datas = {'data':tweet_token_detail}
-    #     json.dump(datas,file,indent=4)
-    # st.stop()
     for date , token_fetched in tweet_token_detail.items():
         date_object = datetime.strptime(str(token_fetched['date']), "%Y-%m-%d %H:%M")
         date = date_object + timedelta(hours=1)
@@ -340,6 +339,7 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe)->dict:
        
         identity = identity + str(identifier)
         structured_data[identity] = { }
+        
         if len(token_contracts) > 0:
             if 'tokens_data' not in st.session_state:
                 process_contract = contractProcessor(token_contracts)
@@ -362,6 +362,86 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe)->dict:
                 identity = identity + str(identifier)
                 structured_data[identity] = { }
                 price_timeframes = fetchPrice(network,pair_address,date,timeframe,token_data['poolId'])
+
+                if 'For_Ai' in st.session_state and 'prepare_for_AI' not in st.session_state:
+                   
+
+                    for_ai_timeframe_data = {}
+
+                    async def pull_price(session,network,pair_address,date,ai_timeframe,pool_id):
+
+                        price_url = 'https://bybit-ohlcv-170603173514.europe-west1.run.app/onchain_price'
+                        # price_url = 'http://127.0.0.1:8000/onchain_price/'
+                        params = {
+                            'network':network,
+                            'pair':pair_address,
+                            'tweeted_date':date,
+                            'timeframe':ai_timeframe,
+                            'poolId':pool_id
+                        }
+                        async with session.get(url=price_url,params=params) as response:
+                            if response.status == 200:
+                                price_data_response = await response.json()
+
+                                if price_data_response:
+                                    if int(ai_timeframe) >= 60:
+                                        hour = str(ai_timeframe //60)
+                                        minutes = ai_timeframe %60
+                                        setTimeframe = f'{hour}:{minutes}m'  if minutes > 0  else f'{hour}hr(s)' 
+                                    else:
+                                        setTimeframe = f'{ai_timeframe}m'
+
+                                    price_data_ai = price_data_response[0][pair_address]
+
+                                    open_price = price_data_ai[f'{setTimeframe}']['open_price']
+                                    close_price = price_data_ai[f'{setTimeframe}']['close_price'] 
+
+                                    perc_increase = percent_increase(open_price,close_price)
+
+                                    for_ai_timeframe_data[setTimeframe] = perc_increase
+                            logging.info('Configuring For Ai Timeframe Response')
+
+                    async def main():
+                        Ai_timeframes = [1,5,15,30,60,120,240,360,720,1440]
+                        async with aiohttp.ClientSession() as session:
+                            
+                            tasks = [pull_price(session,network,pair_address,str(date),ai_timeframe,token_data['poolId']) for ai_timeframe in Ai_timeframes]
+                            await asyncio.gather(*tasks)
+
+                    asyncio.run(main())
+
+                    prepare_for_AI[f"{Ai_count}_{symbol}"] = for_ai_timeframe_data
+                    Ai_count += 1
+                    
+
+                    # for ai_timeframe in Ai_timeframes:
+                    #     logging.info('Analysig Timeframe For Ai Response')
+                    #     price_data_response = fetchPrice(network,pair_address,date,ai_timeframe,token_data['poolId'])
+                        
+                    #     if not price_data_response:
+                    #         continue
+                    #     if int(ai_timeframe) >= 60:
+                    #         hour = str(ai_timeframe //60)
+                    #         minutes = ai_timeframe %60
+                    #         setTimeframe = f'{hour}:{minutes}m'  if minutes > 0  else f'{hour}hr(s)' 
+                    #     else:
+                    #         setTimeframe = f'{ai_timeframe}m'
+
+                    #     price_data_ai = price_data_response[0][pair_address]
+
+                    #     open_price = price_data_ai[f'{setTimeframe}']['open_price']
+                    #     close_price = price_data_ai[f'{setTimeframe}']['close_price'] 
+
+                    #     perc_increase = percent_increase(open_price,close_price)
+
+                    #     for_ai_timeframe_data[setTimeframe] = perc_increase
+
+                    #     Ai_count += 1 # To distinguish tokens
+                    
+                    # prepare_for_AI[f"{Ai_count}_{symbol}"] = for_ai_timeframe_data
+
+
+
 
                 if not price_timeframes:
                     logging.warning('Empty Price Data Spotted , Skipping')
@@ -420,6 +500,10 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe)->dict:
     
     structured_data= { date:value for date,value in structured_data.items() if value}
     if structured_data:
+       
+       if 'prepare_for_AI' not in st.session_state:
+            st.session_state['prepare_for_AI'] = prepare_for_AI
+
        if 'df_data' not in st.session_state:
         st.toast('Filtering  Fetched Token Price Data!')
         logging.info('Filtering  Fetched Token Price Data!')
@@ -434,6 +518,7 @@ def token_tweeted_analyzor(tweet_token_detail:dict,timeframe=5)-> dict:
     # print(tweet_token_detail)
     logging.info('Fetching Tweeted Token Datas and Price TimeFrames Please Wait..')
     analyzor = Tweet_tokenInfoProcessor(tweet_token_detail,timeframe)
+    
     if 'Error' in analyzor:
         return analyzor
     for username in analyzor: # filter
@@ -544,6 +629,5 @@ def fetch_price(pair,tweeted_date,five_minute,ten_minute,fifteen_minute):
 
     price_timeframes = process_pair(pair,tweeted_date,five_minute,ten_minute,fifteen_minute)
     return price_timeframes
-
 
 

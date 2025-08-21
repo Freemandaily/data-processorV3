@@ -10,6 +10,7 @@ from TweetData import contractProcessor
 import gspread
 from gspread_dataframe import set_with_dataframe
 from KolSearch import searchKeyword,SingleUserSearch
+from KolSearch import GeminiRefine
 
 logging.basicConfig(
     level=logging.INFO,
@@ -112,9 +113,6 @@ def worksForReload(contracts_input,
         pass
     
     try:
-        # if st.session_state['kolSearch_date']  != str(kolSearch_date):
-        #     print(type(st.session_state['kolSearch_date']))
-        #     print(type(kolSearch_date))
         if st.session_state['kolSearch_date']  != str(kolSearch_date) and 'SingleSearch' not in st.session_state:
             
             if 'df_data'in st.session_state:
@@ -123,17 +121,6 @@ def worksForReload(contracts_input,
     except:
         pass
         
-            
-    # try:
-    #     if st.session_state['username_url'] != username_url:
-    #         if 'linkSearch' in st.session_state:
-    #             del  st.session_state['linkSearch']
-    #         if 'Search Ticker On Cex' in st.session_state:
-    #             del st.session_state['Search Ticker On Cex']
-    # except:
-    #     pass
-
-
 
 st.header('Data-Extraction and Processing')
 with st.sidebar:
@@ -165,15 +152,6 @@ with st.sidebar:
                    kolSearch_date,
                    kolSearch_From_date)
 
-   
-    # About = """
-    # The Analyst module is tool designed to analyse the impact of influencer tweet on a particular solana based token.
-    # Built wih the focused on the solana blockchain,the tool scans the twitter activities of the specified influencer within a choosen timeframe and extracts,
-    # symbols and contract Address(CAs) mentioned in the posts then correlate this mentions with the real times price action
-    # at 5-minute,10-minute and 15-minuts interval to reveal the impact.
-    # """
-    # st.write(About)
-
 st.image('data-extract.png')
 def loadsearch(process=None,timeframe=None):
     
@@ -181,11 +159,6 @@ def loadsearch(process=None,timeframe=None):
     logging.info('Loading Search')
     if search.search_with == 'handle_Contract_Search':
         st.session_state['username_url'] = username_url
-        # with st.spinner(f'Loading @{username_url} Handle'):
-        #     userHandler = process.Load_user(username_url,timeframe=timeframe) 
-        # if 'Error' in userHandler:
-        #     st.error(userHandler['Error'])
-        #     st.stop() 
     
         logging.info(f'Search Contract From X Data Activated For @{username_url}')
 
@@ -197,18 +170,21 @@ def loadsearch(process=None,timeframe=None):
         
         with st.spinner(f'Processing @{username_url} Tweets'):
             global tweet_limit
-            process.fetchTweets(tweet_limit)
+
+            st.session_state['For_Ai'] = 'For_Ai' # To indicate that Ai Analysis is needed
+
+            process.fetchTweets(username=username_url,tweet_limit=tweet_limit)
             tweeted_token_details = process.processTweets() # For processing  through tweet to find contract Mentinons
             if 'Error' in tweeted_token_details:
                 st.stop()
             return tweeted_token_details
     elif search.search_with == 'handle_Cex_Search':
         with st.spinner(f'Processing @{username_url} Tweets'):
-            # process.fetchTweets()
-            # tweeted_token_details = process.processTweets() For processing  trough tweet to find contract Mentinons
-                # if 'Error' in tweeted_token_details:
-                #     st.stop()
-                # return tweeted_token_details
+                if 'prepare_for_AI' in st.session_state:
+                    del st.session_state['prepare_for_AI']
+                if 'For_Ai' in st.session_state:
+                    del st.session_state['For_Ai']
+            
                 timeframe = '1,5,15,4:0,24:0'
                 st.session_state['Timeframe'] = timeframe
                 # tweet_limit = 20
@@ -222,8 +198,7 @@ def loadsearch(process=None,timeframe=None):
         with st.spinner(f'Processing  Tweets in Url......'):
             timeframe = '1,15,4:0,24:0'
             st.session_state['Timeframe'] = timeframe
-            # process.search_with_id(username_url)
-            # tweeted_token_details = process.processTweets()  # Enterance to new logic search 
+
             tweeted_token_details = process.linkSearch(username_url,timeframe)
             st.session_state['linkSearch'] = username_url
             st.session_state['username_url'] = username_url
@@ -506,8 +481,14 @@ if search.search_with == 'handle' or  search.search_with == 'link':
                 st.session_state['df_data'] = tweeted_token_details
     
 elif search.search_with == 'Contracts':
+
+    if 'prepare_for_AI' in st.session_state:
+        del st.session_state['prepare_for_AI']
+    if 'For_Ai' in st.session_state:
+        del st.session_state['For_Ai']
     if 'SingleSearch' in st.session_state:
         del st.session_state['SingleSearch']
+
     st.session_state['first_tweet_minute'] = int(first_tweet_minute)
     st.session_state['follower_threshold'] = follower_threshold
     process_2 = processor()
@@ -579,6 +560,10 @@ elif search.search_with == 'Contracts':
             process.slide(price_datas,next_timeframe)
 elif search.search_with == 'KolSearch':
     
+    if 'prepare_for_AI' in st.session_state:
+        del st.session_state['prepare_for_AI']
+    if 'For_Ai' in st.session_state:
+        del st.session_state['For_Ai']
     if 'SingleSearch_Display' in st.session_state:
         del st.session_state['SingleSearch_Display']
     if 'SingleSearch' in st.session_state:
@@ -705,7 +690,19 @@ def display(df_data):
        
     if 'linkSearch' not in st.session_state and 'kolSearch' not in st.session_state and 'SingleSearch' not in st.session_state:
         logging.info('Displaying Data')
+
+        if 'For_Ai' in st.session_state:
+            if 'prepare_for_AI' in st.session_state:
+                prepare_for_AI = st.session_state['prepare_for_AI']
+                Ai_response = GeminiRefine(Ai_assits_Data=prepare_for_AI)
+
+                st.markdown(f"""
+                    {Ai_response}
+                """)
+
+
         st.dataframe(df_data)
+
         st.session_state['displayed'] = 'yes'
         if 'Search_tweets_Contract' in st.session_state:
             st.session_state['Search_tweets_Contract_displayed'] = 'Search_tweets_Contract_displayed'

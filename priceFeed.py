@@ -370,8 +370,9 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe)->dict:
 
                     async def pull_price(session,network,pair_address,date,ai_timeframe,pool_id):
 
-                        price_url = 'https://bybit-ohlcv-170603173514.europe-west1.run.app/onchain_price'
+                        # price_url = 'https://bybit-ohlcv-170603173514.europe-west1.run.app/onchain_price'
                         # price_url = 'http://127.0.0.1:8000/onchain_price/'
+                        price_url = 'https://bybit-ohlcv2.onrender.com/onchain_price'
                         params = {
                             'network':network,
                             'pair':pair_address,
@@ -629,5 +630,6 @@ def fetch_price(pair,tweeted_date,five_minute,ten_minute,fifteen_minute):
 
     price_timeframes = process_pair(pair,tweeted_date,five_minute,ten_minute,fifteen_minute)
     return price_timeframes
+
 
 

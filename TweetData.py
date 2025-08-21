@@ -140,12 +140,12 @@ class processor:
         user_tweets = []
         keep_fetching = True
 
-        
         try:
             while keep_fetching:
                         
                 response = requests.get(url, headers=headers, params=params)
                 if response.status_code == 200:
+                    print(response.status_code)
                     result = response.json()
 
                     timeline = result['timeline']
@@ -162,7 +162,6 @@ class processor:
                                 'created_at':tweet_date,
                                 'username':username
                             }
-
                             if len(user_tweets) >= tweet_limit:
                                 keep_fetching = False
                                 break
@@ -175,14 +174,16 @@ class processor:
                     else:
                         break
                 else:
-                    st.error('Couldnt Requuest For User Data')
-                
+                    st.error('Couldnt Requuest For User Data')   
+
+                self.tweets = user_tweets     
                
         except Exception as e:  
             logging.error(f'Failed To Fetch Tweets Wait For Sometimes')
             Error_message = {'Error':f'Failed To Fetch Tweets Because of  {e}\n Wait For Sometimes'}
             self.tweets = Error_message
 
+    
     # Using X API to fetch user tweets
     # def fetchTweets(self,tweet_limit:int=10) -> list:
     #     logging.info('Fetching User Tweet(s)')
@@ -1059,4 +1060,5 @@ class contractProcessor(processor):
                 last_row = len(sheet.get_all_values()) + 2
                 set_with_dataframe(sheet, df_data, row=last_row, include_index=False, resize=True)
                 st.toast( 'Succesfully Added Data To Sheet')
+
 

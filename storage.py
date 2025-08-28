@@ -25,7 +25,7 @@ def add_to_csv(tweeted_token:dict)->None:
             # st.markdown(f"""
             # {Ai_response}
             # """)
-            st.markdown(f":rainbow-background[{Ai_response}]")
+            st.markdown(f":green-background[{Ai_response}]")
         st.dataframe(tweeted_token)
 
     if ('linkSearch' not in st.session_state and 'kolSearch' not in st.session_state  and 'SingleSearch' not in st.session_state):
@@ -218,3 +218,4 @@ def kolSearch(data):
     df = pd.DataFrame(displayObject)
     st.dataframe(df)
     st.session_state['displayed'] = 'yes'
+

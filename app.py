@@ -171,7 +171,7 @@ def loadsearch(process=None,timeframe=None):
         with st.spinner(f'Processing @{username_url} Tweets'):
             global tweet_limit
 
-            st.session_state['For_Ai'] = 'For_Ai' # To indicate that Ai Analysis is needed
+            # st.session_state['For_Ai'] = 'For_Ai' # To indicate that Ai Analysis is needed   Is shut this down to ,make fetch faster
 
             process.fetchTweets(username=username_url,tweet_limit=tweet_limit)
             tweeted_token_details = process.processTweets() # For processing  through tweet to find contract Mentinons
@@ -733,6 +733,7 @@ def display(df_data):
 
 if 'df_data' in st.session_state: # For displaying the Tweeted data
     display(st.session_state['df_data'])
+
 
 
 

@@ -341,17 +341,38 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe)->dict:
         structured_data[identity] = { }
         
         if len(token_contracts) > 0:
-            if 'tokens_data' not in st.session_state:
+            # if 'tokens_data' not in st.session_state:
+            #     process_contract = contractProcessor(token_contracts)
+            #     if 'data_frames' in st.session_state: # delete session set by contract search option
+            #         del st.session_state['data_frames']
+                    
+            #     fetch_pairs = process_contract.fetch_pairs()
+            #     tokens_data = process_contract.tokens_data
+            # else:
+            #     if 'data_frames' in st.session_state: # delete session set by contract search option
+            #         del st.session_state['data_frames']
+            #     tokens_data = st.session_state['tokens_data']
+
+            contracts_string = ''.join(token_contracts)
+                
+            if 'tokens_data' in st.session_state:
+                if 'data_frames' in st.session_state: # delete session set by contract search option
+                    del st.session_state['data_frames']
+                tokens_data = st.session_state['tokens_data']
+            elif contracts_string in st.session_state:
+                if 'data_frames' in st.session_state: # delete session set by contract search option
+                    del st.session_state['data_frames']
+                tokens_data = st.session_state[contracts_string]
+            else:
                 process_contract = contractProcessor(token_contracts)
                 if 'data_frames' in st.session_state: # delete session set by contract search option
                     del st.session_state['data_frames']
                     
                 fetch_pairs = process_contract.fetch_pairs()
                 tokens_data = process_contract.tokens_data
-            else:
-                if 'data_frames' in st.session_state: # delete session set by contract search option
-                    del st.session_state['data_frames']
-                tokens_data = st.session_state['tokens_data']
+
+                st.session_state[contracts_string] = tokens_data
+
 
             for token_data in tokens_data:# token_contracts:
                 pair_address = token_data['pair']
@@ -630,6 +651,7 @@ def fetch_price(pair,tweeted_date,five_minute,ten_minute,fifteen_minute):
 
     price_timeframes = process_pair(pair,tweeted_date,five_minute,ten_minute,fifteen_minute)
     return price_timeframes
+
 
 
 

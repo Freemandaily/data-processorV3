@@ -507,12 +507,12 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe)->dict:
                 structured_data[identity][token_address][f'price_{setTimeframe}'] = price_data[f'{setTimeframe}']['close_price'] #fetchPrice(pair_address,date,5,timeframe_prices) # 5 min timeFrame
                 percent_change = percent_increase(structured_data[identity][token_address]['Price_Tweeted_At'],structured_data[identity][token_address][f'price_{setTimeframe}'])
                 structured_data[identity][token_address][f'price_{setTimeframe}%Increase'] = percent_change
-                structured_data[identity][token_address][f'{setTimeframe}_lowest_price'] = price_data[f'{setTimeframe}']['lowest_price']
-                structured_data[identity][token_address][f'{setTimeframe}_peak_price'] = price_data[f'{setTimeframe}']['peak_price']
-                structured_data[identity][token_address][f'{setTimeframe}_entry_to_peak'] = price_data[f'{setTimeframe}']['entry_to_peak']
-                entry_to_peak_percent_change = price_data[f'{setTimeframe}']['entry_to_peak']
-                structured_data[identity][token_address][f'{setTimeframe}_Score'] = scoring(timeframe,entry_to_peak_percent_change)
-                structured_data[identity][token_address][f'{setTimeframe} Drawdown'] = price_data[f'{setTimeframe}']['max_drawdown']
+                # structured_data[identity][token_address][f'{setTimeframe}_lowest_price'] = price_data[f'{setTimeframe}']['lowest_price']
+                # structured_data[identity][token_address][f'{setTimeframe}_peak_price'] = price_data[f'{setTimeframe}']['peak_price']
+                # structured_data[identity][token_address][f'{setTimeframe}_entry_to_peak'] = price_data[f'{setTimeframe}']['entry_to_peak']
+                # entry_to_peak_percent_change = price_data[f'{setTimeframe}']['entry_to_peak']
+                # structured_data[identity][token_address][f'{setTimeframe}_Score'] = scoring(timeframe,entry_to_peak_percent_change)
+                # structured_data[identity][token_address][f'{setTimeframe} Drawdown'] = price_data[f'{setTimeframe}']['max_drawdown']
 
         count += 1     
     
@@ -651,6 +651,7 @@ def fetch_price(pair,tweeted_date,five_minute,ten_minute,fifteen_minute):
 
     price_timeframes = process_pair(pair,tweeted_date,five_minute,ten_minute,fifteen_minute)
     return price_timeframes
+
 
 
 

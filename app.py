@@ -227,7 +227,7 @@ def loadsearch(process=None,timeframe=None):
 
             network_choice = st.selectbox(
                 'Select Network Ticker Network',
-                ('Solana','Ethereum','Arbitrum','Aptos','Ton','Base'),
+                ('Solana','Ethereum','Arbitrum','Aptos','Ton','Base','BNB Chain'),
                 index=None,
                 placeholder='Choose Network'
             )
@@ -733,6 +733,7 @@ def display(df_data):
 
 if 'df_data' in st.session_state: # For displaying the Tweeted data
     display(st.session_state['df_data'])
+
 
 
 

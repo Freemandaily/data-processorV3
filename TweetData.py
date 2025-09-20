@@ -725,7 +725,7 @@ class contractProcessor(processor):
 
         for address in ticker_onchain:
             
-            url = f'https://app.geckoterminal.com/api/p1/search?query={address}'
+            url = f'https://app.geckoterminal.com/api/p1/search?query={address[1:]}'
             headers = {
                             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.0",
                             "Accept": "application/json",
@@ -1060,5 +1060,6 @@ class contractProcessor(processor):
                 last_row = len(sheet.get_all_values()) + 2
                 set_with_dataframe(sheet, df_data, row=last_row, include_index=False, resize=True)
                 st.toast( 'Succesfully Added Data To Sheet')
+
 
 

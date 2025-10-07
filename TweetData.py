@@ -60,7 +60,7 @@ class processor:
         
     def linkSearch(self,link:str,timeframe:str):
         url = 'https://basesearchv3-71083952794.europe-west3.run.app/link'
-        url = 'https://basesearchv3.onrender.com/link'
+        # url = 'https://basesearchv3.onrender.com/link'
         # url = 'http://127.0.0.1:8000/link'
         params ={
             'tweet_url':link,
@@ -75,7 +75,7 @@ class processor:
     def SearchTickerOnCex(self,tickers:str,start_date:str,timeframe:str) ->dict:
         logging.info('sending Requst For Cex Ticker Search')
         url = 'https://basesearchv3-71083952794.europe-west3.run.app/ticker'
-        url = 'https://basesearchv3.onrender.com/ticker'
+        # url = 'https://basesearchv3.onrender.com/ticker'
         # url = 'http://127.0.0.1:8000/ticker'
         params ={
             'tickers':tickers,
@@ -1062,6 +1062,7 @@ class contractProcessor(processor):
                 last_row = len(sheet.get_all_values()) + 2
                 set_with_dataframe(sheet, df_data, row=last_row, include_index=False, resize=True)
                 st.toast( 'Succesfully Added Data To Sheet')
+
 
 
 

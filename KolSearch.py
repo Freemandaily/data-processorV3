@@ -20,8 +20,8 @@ logging.basicConfig(
 Ticker_url = 'https://basesearchv3-71083952794.europe-west3.run.app/ticker'
 SearchUserTweet_url = 'https://basesearchv3-71083952794.europe-west3.run.app/SearchUserTweet'
 
-Ticker_url = 'https://basesearchv3.onrender.com/ticker'
-SearchUserTweet_url = 'https://basesearchv3.onrender.com/SearchUserTweet'
+# Ticker_url = 'https://basesearchv3.onrender.com/ticker'
+# SearchUserTweet_url = 'https://basesearchv3.onrender.com/SearchUserTweet'
 
 GEMINI_API = os.environ.get('GEMINIKEY')
 GEMINI_URL =  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
@@ -216,7 +216,7 @@ def searchKeyword(keyword:str,date:str,timeframe:str,from_date:str|None = None,t
             EarlyTweeters = []
             # url = f'http://127.0.0.1:8000/search/{keyword}/{date}'
             url = f'https://basesearchv3-71083952794.europe-west3.run.app/search/{keyword}/{date}'
-            url = f'https://basesearchv3.onrender.com/search/{keyword}/{date}'
+            # url = f'https://basesearchv3.onrender.com/search/{keyword}/{date}'
             params = {}
             if from_date and time:
                 params = {
@@ -374,6 +374,7 @@ def prepare_For_Ai(userdata):
                 data_for_Ai_processing[f'{count}_{symbol}'][f"{priceData['timeframe']}"] = priceData['%_Change']
             count += 1
     return data_for_Ai_processing
+
 
 
 
